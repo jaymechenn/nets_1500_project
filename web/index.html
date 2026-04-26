@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Six Degrees of Wikipedia &mdash; Demo</title>
+  <style>
+    :root {
+      --bg: #0e1116;
+      --panel: #161b22;
+      --panel-2: #1f2630;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #4493f8;
+      --accent-soft: rgba(68, 147, 248, 0.15);
+      --good: #3fb950;
+      --bad: #f85149;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Text", Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0 0 4px;
+      letter-spacing: -0.02em;
+    }
+    .sub {
+      color: var(--muted);
+      margin: 0 0 32px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    input[type="text"] {
+      width: 100%;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 15px;
+      border-radius: 6px;
+      font-family: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: filter 0.15s;
+    }
+    button:hover { filter: brightness(1.1); }
+    button.secondary {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .meta {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .result {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+    .result.empty { color: var(--muted); font-size: 14px; }
+    .result h3 {
+      margin: 0 0 12px;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .path { display: flex; flex-direction: column; gap: 4px; }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 14px;
+    }
+    .step .num {
+      display: inline-flex;
+      width: 22px;
+      height: 22px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .step.endpoint { border-color: var(--accent); }
+    .arrow { color: var(--muted); margin-left: 32px; font-size: 12px; }
+    .stats {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .stats span strong { color: var(--text); font-weight: 600; }
+    .error { color: var(--bad); font-size: 14px; }
+    .examples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 14px;
+    }
+    .examples button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 12px;
+      padding: 6px 10px;
+    }
+    .examples button:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+    .footer {
+      margin-top: 32px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .footer code {
+      background: var(--panel-2);
+      padding: 1px 6px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+    }
+    .badge {
+      display: inline-block;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-left: 8px;
+      vertical-align: middle;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Six Degrees of Wikipedia <span class="badge">DEMO</span></h1>
+    <p class="sub">
+      Type two articles and the BFS engine finds the shortest hyperlink path between them.
+      This demo runs in your browser on a 16-article test graph; the real project is the
+      <strong>Java application</strong> in this folder, which runs the identical algorithm
+      over Stanford SNAP's 1.79&nbsp;million-article Wikipedia graph.
+    </p>
+
+    <div class="panel">
+      <div class="row">
+        <div>
+          <label for="src">Source article</label>
+          <input id="src" type="text" placeholder="Kanye West" autocomplete="off" />
+        </div>
+        <div>
+          <label for="tgt">Target article</label>
+          <input id="tgt" type="text" placeholder="Quantum mechanics" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="go">Find shortest path</button>
+        <button id="random" class="secondary">Random pair</button>
+        <span class="meta" id="meta"></span>
+      </div>
+
+      <div class="examples" id="examples"></div>
+
+      <div class="result empty" id="result">
+        Click <em>Find shortest path</em> to run BFS.
+      </div>
+    </div>
+
+    <div class="footer">
+      <strong>About this demo.</strong> The same BFS implemented here in JavaScript is what the
+      Java project (<code>src/main/java/wikipath/PathFinder.java</code>) runs at scale. To run
+      the real thing on the full SNAP graph:
+      <br />
+      &nbsp;&nbsp;<code>./scripts/download-data.sh</code>
+      <br />
+      &nbsp;&nbsp;<code>java -Xmx2g -cp target/classes wikipath.Main path "Kanye West" "Quantum mechanics"</code>
+    </div>
+  </div>
+
+  <script>
+    // BFS over a directed graph stored as an adjacency list.
+    // Mirrors the algorithm in PathFinder.java exactly.
+    function bfsShortestPath(adj, src, tgt) {
+      const t0 = performance.now();
+      if (src === tgt) {
+        return { path: [src], hops: 0, visited: 1, ms: 0 };
+      }
+      const parent = new Int32Array(adj.length).fill(-1);
+      parent[src] = src;
+      const queue = [src];
+      let head = 0;
+      let visited = 1;
+      let found = false;
+      while (head < queue.length) {
+        const u = queue[head++];
+        const nbrs = adj[u];
+        for (let i = 0; i < nbrs.length; i++) {
+          const v = nbrs[i];
+          if (parent[v] === -1) {
+            parent[v] = u;
+            visited++;
+            if (v === tgt) { found = true; break; }
+            queue.push(v);
+          }
+        }
+        if (found) break;
+      }
+      const ms = performance.now() - t0;
+      if (parent[tgt] === -1) return { path: [], hops: -1, visited, ms };
+      const path = [];
+      let cur = tgt;
+      while (true) {
+        path.push(cur);
+        if (cur === src) break;
+        cur = parent[cur];
+      }
+      path.reverse();
+      return { path, hops: path.length - 1, visited, ms };
+    }
+
+    // Title normalization matching TitleIndex.java: lowercase, collapse runs
+    // of whitespace/underscores into single underscores.
+    function normalize(s) {
+      let out = "";
+      let lastSep = true;
+      for (const c of s) {
+        if (c === " " || c === "_" || c === "\t") {
+          if (!lastSep) { out += "_"; lastSep = true; }
+        } else {
+          out += c.toLowerCase();
+          lastSep = false;
+        }
+      }
+      if (out.endsWith("_")) out = out.slice(0, -1);
+      return out;
+    }
+
+    let GRAPH = null;
+    let ADJ = null;
+    let TITLE_TO_ID = null;
+
+    async function loadGraph() {
+      const resp = await fetch("graph.json");
+      if (!resp.ok) throw new Error("Failed to load graph.json (" + resp.status + ")");
+      const g = await resp.json();
+      const n = g.names.length;
+      const adj = Array.from({ length: n }, () => []);
+      for (const [u, v] of g.edges) adj[u].push(v);
+      const map = new Map();
+      g.names.forEach((name, id) => map.set(normalize(name), id));
+      GRAPH = g;
+      ADJ = adj;
+      TITLE_TO_ID = map;
+    }
+
+    function findId(text) {
+      if (!text) return -1;
+      const id = TITLE_TO_ID.get(normalize(text));
+      return id === undefined ? -1 : id;
+    }
+
+    function renderResult(srcText, tgtText) {
+      const result = document.getElementById("result");
+      const meta = document.getElementById("meta");
+      result.classList.remove("empty");
+      result.innerHTML = "";
+      meta.textContent = "";
+
+      const sId = findId(srcText);
+      const tId = findId(tgtText);
+      if (sId < 0) {
+        result.innerHTML = '<div class="error">Source article not found in demo graph: "' + srcText + '"</div>';
+        return;
+      }
+      if (tId < 0) {
+        result.innerHTML = '<div class="error">Target article not found in demo graph: "' + tgtText + '"</div>';
+        return;
+      }
+
+      const r = bfsShortestPath(ADJ, sId, tId);
+      meta.textContent = r.hops < 0
+        ? "no path"
+        : r.hops + " hops &middot; " + r.visited + " nodes visited &middot; " + r.ms.toFixed(2) + " ms";
+      meta.innerHTML = meta.textContent;
+
+      if (r.hops < 0) {
+        result.innerHTML = '<div class="error">No path exists from "'
+          + GRAPH.names[sId] + '" to "' + GRAPH.names[tId] + '" in this demo graph.</div>';
+        return;
+      }
+
+      const h3 = document.createElement("h3");
+      h3.textContent = "Shortest hyperlink path";
+      result.appendChild(h3);
+
+      const list = document.createElement("div");
+      list.className = "path";
+      r.path.forEach((id, i) => {
+        const step = document.createElement("div");
+        step.className = "step" + (i === 0 || i === r.path.length - 1 ? " endpoint" : "");
+        step.innerHTML = '<span class="num">' + i + "</span><span>" + GRAPH.names[id] + "</span>";
+        list.appendChild(step);
+        if (i < r.path.length - 1) {
+          const a = document.createElement("div");
+          a.className = "arrow";
+          a.textContent = "↓";
+          list.appendChild(a);
+        }
+      });
+      result.appendChild(list);
+
+      const stats = document.createElement("div");
+      stats.className = "stats";
+      stats.innerHTML =
+        '<span><strong>' + r.hops + '</strong> hops</span>' +
+        '<span><strong>' + r.visited + '</strong> nodes visited</span>' +
+        '<span><strong>' + r.ms.toFixed(2) + '</strong> ms</span>';
+      result.appendChild(stats);
+    }
+
+    function renderExamples() {
+      const examples = [
+        ["Kanye West", "Quantum mechanics"],
+        ["Kanye West", "Mathematics"],
+        ["Concert", "Rap"],
+        ["Album", "Wave"],
+        ["Producer", "Mathematics"],
+      ];
+      const box = document.getElementById("examples");
+      examples.forEach(([s, t]) => {
+        const b = document.createElement("button");
+        b.textContent = s + " → " + t;
+        b.onclick = () => {
+          document.getElementById("src").value = s;
+          document.getElementById("tgt").value = t;
+          renderResult(s, t);
+        };
+        box.appendChild(b);
+      });
+    }
+
+    function randomPair() {
+      const n = GRAPH.names.length;
+      let s, t;
+      do { s = Math.floor(Math.random() * n); t = Math.floor(Math.random() * n); } while (s === t);
+      const sN = GRAPH.names[s], tN = GRAPH.names[t];
+      document.getElementById("src").value = sN;
+      document.getElementById("tgt").value = tN;
+      renderResult(sN, tN);
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        await loadGraph();
+      } catch (e) {
+        document.getElementById("result").innerHTML =
+          '<div class="error">Could not load graph.json. Make sure you opened this page via Live Server (not as <code>file://</code>) so the browser can fetch it.</div>';
+        return;
+      }
+      renderExamples();
+      document.getElementById("go").onclick = () => {
+        renderResult(
+          document.getElementById("src").value,
+          document.getElementById("tgt").value
+        );
+      };
+      document.getElementById("random").onclick = randomPair;
+      ["src", "tgt"].forEach(id => {
+        document.getElementById(id).addEventListener("keydown", e => {
+          if (e.key === "Enter") document.getElementById("go").click();
+        });
+      });
+    });
+  </script>
+</body>
+</html>

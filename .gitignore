@@ -1,0 +1,10 @@
+target/
+*.class
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+data/*.txt
+data/*.gz
+!data/.gitkeep
