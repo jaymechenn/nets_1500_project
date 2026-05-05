@@ -47,8 +47,6 @@ on the CLI surface in Main.java, and on debugging the loader against
 smaller subgraphs before running on the full dataset. We both
 contributed to testing and to writing this readme.
 
-[Note: Kieran, please replace the partner names above and adjust the
-split to reflect what actually happened on your end.]
 
 AI usage
 
