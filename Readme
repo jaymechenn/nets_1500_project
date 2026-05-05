@@ -44,9 +44,10 @@ collaborated on the statistics module (mean path length with confidence
 intervals, bridge counting, Wilson intervals on the bridge proportions,
 and the split-half stability check using Spearman's rank correlation),
 on the CLI surface in Main.java, and on debugging the loader against
-smaller subgraphs before running on the full dataset. We both
-contributed to testing and to writing this readme.
-
+smaller subgraphs before running on the full dataset. Jayme prepared
+the demo data and browser demo, checked the command-line workflow, and
+helped write the final README and user manual. All three members
+contributed to testing and to the final project write-up.
 
 AI usage
 
@@ -66,3 +67,42 @@ our own work. Claude was used as a thinking partner during planning,
 not as a code generator.
 
 Changes from proposal:
+
+The original proposal focused on a single shortest-path finder. The
+final project keeps that core feature and adds three concrete extensions:
+an interactive REPL so the graph only has to be loaded once, a statistics
+runner for average path length and bridge-article analysis, and a small
+browser demo that illustrates the same BFS idea on a 16-article toy graph.
+
+How to run
+
+Build the Java classes first if target/classes is missing:
+
+  mkdir -p target/classes
+  javac --release 17 -d target/classes src/main/java/wikipath/*.java
+
+With the included demo data, run:
+
+  java -cp target/classes wikipath.Main path --edges demo-data/edges.txt --names demo-data/names.txt "Kanye West" "Quantum mechanics"
+
+For repeated queries, run:
+
+  java -cp target/classes wikipath.Main repl --edges demo-data/edges.txt --names demo-data/names.txt
+
+For the full SNAP dataset, first run:
+
+  bash scripts/download-data.sh
+
+Then use the default data paths:
+
+  java -Xmx2g -cp target/classes wikipath.Main path "Kanye West" "Quantum mechanics"
+  java -Xmx2g -cp target/classes wikipath.Main stats --preset quick
+
+Dataset source
+
+The full data comes from the Stanford SNAP wiki-topcats dataset:
+https://snap.stanford.edu/data/wiki-topcats.html. The download script
+fetches wiki-topcats.txt.gz and wiki-topcats-page-names.txt.gz and
+places the uncompressed files in data/. The repository also includes
+demo-data/edges.txt and demo-data/names.txt so the program can be run
+quickly without downloading the 430 MB full edge file.
