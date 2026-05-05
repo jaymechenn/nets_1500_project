@@ -14,28 +14,26 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 /**
- * Loads the SNAP {@code wiki-topcats} dataset into an in-memory CSR graph
- * plus a bidirectional title index.
+ * We are using a graph loader similar to some other ones from CIS 1200 to load the SNAP dataset into an in-memory CSR graph
  *
  * <h2>Expected files</h2>
  * <ul>
  *   <li><b>edges</b>: {@code wiki-topcats.txt[.gz]} &mdash; one edge per
- *       line as {@code "u v"} (whitespace separated). Lines starting with
- *       {@code '#'} are treated as comments.</li>
+ *       line as {@code "u v"} (whitespace separated).</li>
  *   <li><b>page names</b>: {@code wiki-topcats-page-names.txt[.gz]} &mdash;
  *       one article per line as {@code "id name"} where {@code id} is the
  *       integer node ID and {@code name} is the rest of the line (Wikipedia
  *       titles use underscores instead of spaces).</li>
  * </ul>
  *
- * <p>The loader does two passes over the edge file: one to count
- * out-degrees, one to fill the edge array. Going through CSR rather than
+ * <p>Our loader should do two passes over the edge file, one to count
+ * out-degrees, and one to fill the edge array. Going through CSR rather than
  * {@code Map<Integer, List<Integer>>} keeps the resident set under
  * &asymp;150&nbsp;MB for the full 28.5M-edge graph.</p>
  */
 public final class GraphLoader {
 
-    /** Bundles together the loaded graph and its title index. */
+    /** First bundle together the loaded graph and its title index */
     public static final class Loaded {
         public final WikiGraph graph;
         public final TitleIndex titles;
@@ -51,11 +49,8 @@ public final class GraphLoader {
     private GraphLoader() {}
 
     /**
-     * Loads the graph and titles. Progress is written to {@code log}.
+     * Load the graph and titles.
      *
-     * @param edgesFile path to the SNAP edges file (gzipped or not)
-     * @param namesFile path to the SNAP page-names file (gzipped or not)
-     * @param log progress sink (e.g. {@code System.err}); may be {@code null}
      */
     public static Loaded load(Path edgesFile, Path namesFile, PrintStream log) throws IOException {
         long start = System.currentTimeMillis();
@@ -123,7 +118,6 @@ public final class GraphLoader {
         return new Loaded(new WikiGraph(offsets, edges), new TitleIndex(idToTitle, titleToId), total);
     }
 
-    // ---------------------------------------------------------------- I/O
 
     private static void requireFile(Path p, String label) throws IOException {
         if (!Files.exists(p)) {
@@ -144,7 +138,6 @@ public final class GraphLoader {
         return new BufferedReader(new InputStreamReader(openMaybeGzipped(p), StandardCharsets.UTF_8), 1 << 20);
     }
 
-    // ---------------------------------------------------------- page names
 
     private static String[] readPageNames(Path namesFile) throws IOException {
         // Format per line: "<id> <title>" where title may include underscores
@@ -186,8 +179,6 @@ public final class GraphLoader {
         }
         return out;
     }
-
-    // -------------------------------------------------------- edge passes
 
     /** Result of pass 1 over the edges file. */
     private static final class DegreeCount {
@@ -237,16 +228,10 @@ public final class GraphLoader {
         return Arrays.copyOf(a, newCap);
     }
 
-    // ----------------------------------------------------- byte-level scan
-
     /**
-     * Streaming byte-level parser for the SNAP edge format. Each record is
-     * two non-negative integers separated by whitespace, terminated by a
-     * newline. Lines beginning with {@code '#'} are skipped.
+     * Streaming the byte-level parser for the SNAP edge format. Each record is
+     * two non-negative integers separated by whitespace.
      *
-     * <p>Operating on raw bytes (no {@code BufferedReader.readLine()} +
-     * {@code String.split}) cuts the second pass roughly in half on the
-     * 28.5M-edge graph.</p>
      */
     private static final class EdgeStream {
         private final InputStream in;
