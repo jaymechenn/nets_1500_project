@@ -1,0 +1,70 @@
+Six Degrees of Wikipedia
+Group members: Kieran, Andreaa, Jayme
+
+Our project is a Java application that finds the shortest hyperlink path
+between any two Wikipedia articles, a programmatic version of the "Six
+Degrees of Wikipedia" problem. We built it on the Stanford SNAP
+wiki-topcats dataset, a 2011 snapshot of the Wikipedia hyperlink graph
+containing roughly 1.79 million articles and 28.5 million directed
+links between them. The core algorithm is breadth-first search from the
+source article with parent pointers stored along the way, which lets us
+reconstruct the actual chain of links once we reach the target. On top
+of the path finder, we added a statistical component that estimates the
+average shortest-path length on the graph and identifies the "bridge"
+articles, such as United States, England, and World War II, that show
+up most often as intermediate nodes in random shortest paths. The
+application supports a one-shot CLI query, an interactive REPL that
+loads the graph once and answers many queries, and a bulk statistics
+runner that produces the analysis numbers for our write-up.
+
+Categories used
+
+This project draws on two of the course categories. The primary one is
+Graphs and graph algorithms. We use a directed graph stored in
+compressed sparse row form, BFS to compute single-source shortest paths
+in a unit-weight graph, parent pointers to reconstruct the actual path,
+and a generation-counter trick to reuse BFS state across queries
+without zeroing the 1.79 million-entry parent array between runs. The
+second category is Information Networks and the World Wide Web. The
+Wikipedia hyperlink graph is exactly the kind of small-world network
+covered in lecture, and our statistics confirm the lecture story
+empirically: the mean shortest-path length is about 3.8 hops despite
+the graph having 1.79 million nodes, and the bridge frequency
+distribution is heavily skewed toward a handful of mega-hubs.
+
+Work breakdown
+
+Kieran handled the data loading pipeline, including the byte-level
+parser that reads the 430 MB edge file in two passes and builds the CSR
+representation, plus the title index that supports case-insensitive and
+underscore-insensitive article name lookup. Andreaa wrote the BFS
+and path reconstruction logic in PathFinder.java, including the
+generation-counter optimization that makes repeated queries fast. We
+collaborated on the statistics module (mean path length with confidence
+intervals, bridge counting, Wilson intervals on the bridge proportions,
+and the split-half stability check using Spearman's rank correlation),
+on the CLI surface in Main.java, and on debugging the loader against
+smaller subgraphs before running on the full dataset. We both
+contributed to testing and to writing this readme.
+
+[Note: Kieran, please replace the partner names above and adjust the
+split to reflect what actually happened on your end.]
+
+AI usage
+
+We used Claude at a few specific points in the project.
+Early on, we used it to brainstorm scope, in particular whether to
+build the path finder on the full English Wikipedia dump or on the
+smaller SNAP wiki-topcats dataset; Claude helped us reason through the
+memory tradeoffs and we ended up choosing SNAP because it fits
+comfortably in a 2 GB heap on a laptop. We also used Claude as a sanity
+check on the sampling methodology for the statistics section,
+specifically to confirm the form of the Riondato and Kornaropoulos
+sample-size bound for betweenness estimation and to talk through why
+Wilson intervals are more appropriate than the textbook normal
+interval when the bridge-frequency proportions are small. All of the
+Java code, the empirical analysis, and the writing in this readme are
+our own work. Claude was used as a thinking partner during planning,
+not as a code generator.
+
+Changes from proposal:
