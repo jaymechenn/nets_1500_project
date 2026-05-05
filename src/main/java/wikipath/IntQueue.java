@@ -1,9 +1,9 @@
 package wikipath;
 
 /**
- * A primitive-int FIFO queue backed by a growable circular buffer.
- * Used in BFS to avoid the autoboxing overhead of {@code ArrayDeque<Integer>}
- * when traversing graphs with millions of nodes.
+ * Used FIFO queue backed by a "growable circular buffer"(searched this up).
+ * Its used in BFS to avoid the "autoboxing overhead of {@code ArrayDeque<Integer>}"
+ * when traversing graphs with  many millions of nodes.
  */
 final class IntQueue {
 
