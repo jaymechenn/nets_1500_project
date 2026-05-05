@@ -3,33 +3,25 @@ package wikipath;
 import java.util.Arrays;
 
 /**
- * BFS-based shortest path engine over a {@link WikiGraph}. Because every
- * hyperlink has the same weight (one hop), breadth-first search is
- * optimal for shortest path here.
+ * WE used a BFS-based shortest path engine over the wiki graph, because every
+ * hyperlink has the same weight, so BFS is
+ * clearly optimal for shortest path here.
  *
- * <p>Instances are <em>not</em> thread-safe but are reusable: the
- * internal parent array is reset between queries by a generation
- * counter, avoiding a 7&nbsp;MB {@code Arrays.fill} per call on the
- * full SNAP graph.</p>
  */
 public final class PathFinder {
 
-    /** Sentinel for {@link Result#hops()} when no path exists. */
+/**
+ * Define vars
+ */
     public static final int NO_PATH = -1;
-
     private final WikiGraph graph;
-
-    /** {@code parentGen[v] == currentGen} ⇒ {@code v} was visited in the current BFS. */
     private final int[] parentGen;
-    /** Parent of {@code v} in the BFS tree (only meaningful when {@code parentGen[v] == currentGen}). */
     private final int[] parent;
-    /** Distance from source to {@code v} (only meaningful when visited). */
     private final int[] distance;
     private int currentGen;
-
     private final IntQueue queue;
 
-    /** Result of a BFS query. */
+    /** Result of BFS query */
     public static final class Result {
         private final int[] path;
         private final int hops;
@@ -43,7 +35,7 @@ public final class PathFinder {
             this.nodesVisited = nodesVisited;
         }
 
-        /** Path of node IDs from source to target, or empty array if unreachable. */
+        /** Path of node IDs from src to tgt, or empty array if unreachable */
         public int[] path() { return path; }
         /** Number of hops in the shortest path, or {@link #NO_PATH} if unreachable. */
         public int hops() { return hops; }
@@ -64,8 +56,8 @@ public final class PathFinder {
     }
 
     /**
-     * Find the shortest hyperlink path from {@code source} to {@code target}.
-     * Both must be valid node IDs in {@code [0, graph.numNodes())}.
+     * Find the shortest hyperlink path from src to tgt
+     * Both must be valid node IDs
      */
     public Result shortestPath(int source, int target) {
         if (source < 0 || source >= graph.numNodes()
@@ -118,11 +110,8 @@ public final class PathFinder {
     }
 
     /**
-     * Run BFS from {@code source} over the entire reachable subgraph and
-     * leave the parent / distance arrays populated. Useful for batch
-     * stats where many targets share one source.
-     *
-     * @return number of reachable nodes (including the source itself)
+     * Run BFS from src over the entire subgraph and
+     * leave the parent / dist arrays populated
      */
     public int runFullBfs(int source) {
         if (source < 0 || source >= graph.numNodes()) {
@@ -156,19 +145,17 @@ public final class PathFinder {
         return reached;
     }
 
-    /** True if {@code node} was reached by the most recent {@link #runFullBfs(int)}. */
     public boolean wasReached(int node) {
         return parentGen[node] == currentGen;
     }
 
-    /** Distance from the most recent BFS source to {@code node}, or {@link #NO_PATH}. */
+    /** dist from the most recent BFS src to curr node */
     public int distanceTo(int node) {
         return parentGen[node] == currentGen ? distance[node] : NO_PATH;
     }
 
     /**
-     * Reconstruct the path source-&gt;...&gt;target after a successful BFS.
-     * Caller is responsible for ensuring {@code target} was reached.
+     * Reconstruct the path src after running BFS.
      */
     public int[] reconstruct(int source, int target) {
         if (parentGen[target] != currentGen) return new int[0];
