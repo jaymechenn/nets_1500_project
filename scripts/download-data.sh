@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# Downloads the SNAP wiki-topcats dataset (graph + article names) into ./data
-# Total compressed: ~108 MB. Decompressed: ~430 MB.
+# This sownloads the SNAP wiki-topcats dataset into ./data
 #
-# Robust against interruption:
-#   - uses curl -C - to resume a partially downloaded .gz
-#   - validates the gzip stream (gzip -t) before unpacking; if the file is
-#     corrupt (e.g. an aborted download) it is removed and re-fetched.
 set -euo pipefail
 
 DATA_DIR="$(cd "$(dirname "$0")/.." && pwd)/data"
