@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Command-line front end. Five sub-commands:
+ * Five sub-commands to use :
  *
  * <pre>
  *   wikipath path "Source Article" "Target Article"   # one-shot query
@@ -59,7 +59,7 @@ public final class Main {
 
     private enum StatsMode { FULL, BRIDGES_ONLY, AVGPATH_ONLY }
 
-    // ----------------------------------------------------------- commands
+    // commands
 
     private static void runPath(Path edges, Path names, Args a) throws IOException {
         if (a.positional.size() < 2) {
@@ -149,7 +149,7 @@ public final class Main {
         }
     }
 
-    /** Sample-size presets for {@code stats} and {@code bridges}. */
+    /** Sample-size presets */
     private enum Preset {
         QUICK    ("quick",     50,  50),  //  ~2,500 pairs
         DEFAULT_ ("default",  200, 200),  // ~40,000 pairs
@@ -178,7 +178,7 @@ public final class Main {
         }
     }
 
-    // ------------------------------------------------------------- output
+    // output from the commands
 
     private static void printQueryResult(PathFinder.Result r, TitleIndex idx, String src, String tgt) {
         System.out.println();
@@ -200,7 +200,7 @@ public final class Main {
         System.out.println();
     }
 
-    // --------------------------------------------------------------- args
+    //  args
 
     private static boolean isHelp(String s) {
         return s.equals("-h") || s.equals("--help") || s.equals("help");
