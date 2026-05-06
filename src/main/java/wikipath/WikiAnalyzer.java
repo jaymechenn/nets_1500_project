@@ -139,6 +139,44 @@ public class WikiAnalyzer {
         return lastReachablePairs;
     }
 
+    public int getLastTrials() {
+        return lastTrials;
+    }
+
+    public double getLastAverageNeighborhoodOverlap() {
+        return lastAverageNeighborhoodOverlap;
+    }
+
+    public double getLastAverageLocalClustering() {
+        return lastAverageLocalClustering;
+    }
+
+    public int getLastPathEdgesChecked() {
+        return lastPathEdgesChecked;
+    }
+
+    public int getLastLocalBridgeEdges() {
+        return lastLocalBridgeEdges;
+    }
+
+    /**
+     * Returns the top {@code howMany} bridge articles from the most recent
+     * analysis run, sorted by descending sample count. Each entry maps an
+     * article ID to the number of sampled shortest paths it appeared inside.
+     */
+    public List<Map.Entry<Integer, Integer>> getTopBridgeArticles(int howMany) {
+        if (bridgeCounts.isEmpty()) {
+            return new ArrayList<>();
+        }
+        ArrayList<Map.Entry<Integer, Integer>> entries =
+                new ArrayList<>(bridgeCounts.entrySet());
+        entries.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+        if (entries.size() > howMany) {
+            return entries.subList(0, howMany);
+        }
+        return entries;
+    }
+
     private void countBridgeArticles(List<Integer> path) {
         for (int i = 1; i < path.size() - 1; i++) {
             int articleId = path.get(i);

@@ -3,19 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Six Degrees of Wikipedia &mdash; Demo</title>
+  <title>WikiPath &mdash; Six Degrees of Wikipedia</title>
   <style>
     :root {
       --bg: #0e1116;
       --panel: #161b22;
       --panel-2: #1f2630;
+      --panel-3: #232b36;
       --border: #30363d;
+      --border-strong: #3f4955;
       --text: #e6edf3;
       --muted: #8b949e;
+      --muted-2: #6e7781;
       --accent: #4493f8;
       --accent-soft: rgba(68, 147, 248, 0.15);
+      --accent-strong: #58a6ff;
       --good: #3fb950;
       --bad: #f85149;
+      --warn: #d29922;
     }
     * { box-sizing: border-box; }
     html, body {
@@ -26,144 +31,190 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Text", Helvetica, Arial, sans-serif;
       min-height: 100vh;
     }
-    .wrap {
-      max-width: 820px;
-      margin: 0 auto;
-      padding: 48px 24px 80px;
+    a { color: var(--accent-strong); }
+    button {
+      font-family: inherit;
+      cursor: pointer;
     }
-    h1 {
-      font-size: 28px;
-      margin: 0 0 4px;
-      letter-spacing: -0.02em;
+    input, select, textarea {
+      font-family: inherit;
     }
-    .sub {
-      color: var(--muted);
-      margin: 0 0 32px;
-      font-size: 15px;
-      line-height: 1.5;
-    }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 24px;
-      margin-bottom: 20px;
-    }
-    .row {
+    .app {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
+      grid-template-columns: 380px 1fr;
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "header header"
+        "sidebar main";
+      min-height: 100vh;
     }
-    @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
-    label {
-      display: block;
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 6px;
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "header"
+          "sidebar"
+          "main";
+      }
+      .sidebar { border-right: none !important; border-bottom: 1px solid var(--border); }
+      .main { min-height: 60vh; }
+    }
+    header.top {
+      grid-area: header;
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--panel);
+    }
+    header.top h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+    }
+    header.top .badge {
+      display: inline-block;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-left: 4px;
+      vertical-align: middle;
+      font-weight: 600;
       letter-spacing: 0.04em;
+    }
+    header.top .stats {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    header.top .stats span strong { color: var(--text); font-weight: 600; }
+    .mode-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      letter-spacing: 0.04em;
+      font-weight: 600;
       text-transform: uppercase;
     }
-    input[type="text"] {
+    .mode-tag.live { background: rgba(63,185,80,0.15); color: var(--good); }
+    .mode-tag.demo { background: rgba(210,153,34,0.15); color: var(--warn); }
+    .sidebar {
+      grid-area: sidebar;
+      padding: 24px;
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      overflow-y: auto;
+      max-height: calc(100vh - 60px);
+    }
+    .main {
+      grid-area: main;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow: auto;
+      max-height: calc(100vh - 60px);
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .field {
+      position: relative;
+    }
+    input[type="text"], input[type="number"] {
       width: 100%;
       background: var(--panel-2);
       border: 1px solid var(--border);
       color: var(--text);
       padding: 10px 12px;
-      font-size: 15px;
+      font-size: 14px;
       border-radius: 6px;
-      font-family: inherit;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-    input[type="text"]:focus {
+    input:focus {
       outline: none;
       border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-soft);
     }
+    .suggest {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      background: var(--panel-3);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 10;
+      display: none;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    }
+    .suggest.open { display: block; }
+    .suggest .item {
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+    }
+    .suggest .item:last-child { border-bottom: none; }
+    .suggest .item:hover, .suggest .item.active {
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+    }
     .actions {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
-      align-items: center;
     }
-    button {
+    button.primary {
       background: var(--accent);
       color: white;
       border: none;
-      padding: 10px 18px;
+      padding: 9px 16px;
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
       transition: filter 0.15s;
     }
-    button:hover { filter: brightness(1.1); }
+    button.primary:hover { filter: brightness(1.1); }
     button.secondary {
       background: var(--panel-2);
       color: var(--text);
       border: 1px solid var(--border);
-    }
-    .meta {
-      margin-left: auto;
-      color: var(--muted);
-      font-size: 13px;
-      font-variant-numeric: tabular-nums;
-    }
-    .result {
-      margin-top: 24px;
-      padding-top: 24px;
-      border-top: 1px solid var(--border);
-    }
-    .result.empty { color: var(--muted); font-size: 14px; }
-    .result h3 {
-      margin: 0 0 12px;
-      font-size: 13px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    .path { display: flex; flex-direction: column; gap: 4px; }
-    .step {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      background: var(--panel-2);
-      border: 1px solid var(--border);
+      padding: 9px 14px;
       border-radius: 6px;
-      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-      font-size: 14px;
-    }
-    .step .num {
-      display: inline-flex;
-      width: 22px;
-      height: 22px;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-size: 11px;
-      font-weight: 700;
-    }
-    .step.endpoint { border-color: var(--accent); }
-    .arrow { color: var(--muted); margin-left: 32px; font-size: 12px; }
-    .stats {
-      display: flex;
-      gap: 24px;
-      margin-top: 16px;
-      flex-wrap: wrap;
       font-size: 13px;
-      color: var(--muted);
     }
-    .stats span strong { color: var(--text); font-weight: 600; }
-    .error { color: var(--bad); font-size: 14px; }
+    button.secondary:hover { border-color: var(--accent); color: var(--accent-strong); }
+    button.ghost {
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      font-size: 12px;
+      padding: 4px 8px;
+    }
+    button.ghost:hover { color: var(--text); }
     .examples {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
-      margin-top: 14px;
     }
     .examples button {
       background: transparent;
@@ -171,16 +222,265 @@
       color: var(--muted);
       font-weight: 400;
       font-size: 12px;
-      padding: 6px 10px;
+      padding: 5px 10px;
+      border-radius: 999px;
     }
     .examples button:hover {
       color: var(--text);
       border-color: var(--accent);
     }
-    .footer {
-      margin-top: 32px;
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .section h2 {
+      margin: 0;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .history {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .history .row {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .history .row:hover { border-color: var(--accent); }
+    .history .row .pair {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .history .row .meta { color: var(--muted); font-size: 11px; flex-shrink: 0; }
+    .history .empty { font-size: 12px; color: var(--muted); padding: 6px 4px; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    #vizPanel {
+      flex: 1;
+      min-height: 360px;
+      display: flex;
+      flex-direction: column;
+    }
+    #vizWrap {
+      flex: 1;
+      min-height: 320px;
+      background:
+        radial-gradient(circle at 25% 20%, rgba(68,147,248,0.06), transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(63,185,80,0.05), transparent 50%),
+        var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    #viz { width: 100%; height: 100%; display: block; }
+    #viz text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; pointer-events: none; }
+    #viz .neighbor circle { fill: var(--panel-3); stroke: var(--border-strong); stroke-width: 1; cursor: pointer; transition: stroke 0.15s; }
+    #viz .neighbor:hover circle { stroke: var(--accent); }
+    #viz .neighbor text { fill: var(--muted); font-size: 10px; }
+    #viz .pathnode circle { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; cursor: pointer; transition: fill 0.15s; }
+    #viz .pathnode:hover circle { fill: rgba(68,147,248,0.3); }
+    #viz .pathnode.endpoint circle { fill: var(--accent); stroke: var(--accent-strong); }
+    #viz .pathnode.endpoint text.label { fill: white; font-weight: 700; }
+    #viz .pathnode text.label { fill: var(--text); font-size: 12px; font-weight: 600; }
+    #viz .edge { stroke: var(--border-strong); stroke-width: 1.2; fill: none; }
+    #viz .edge.path { stroke: var(--accent); stroke-width: 2.5; }
+    #viz .legend {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      gap: 14px;
+      background: rgba(15,18,22,0.6);
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    #viz .legend .dot {
+      display: inline-block;
+      width: 10px; height: 10px; border-radius: 50%;
+      margin-right: 6px; vertical-align: middle;
+    }
+    .path-list {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    .path-list .step {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 13px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    .path-list .step.endpoint { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
+    .path-list .step .num {
+      background: var(--accent);
+      color: white;
+      font-size: 10px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+    .path-list .step a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .path-list .step a:hover { text-decoration: underline; }
+    .path-list .arrow { color: var(--muted); font-size: 14px; }
+    .stats-row {
+      display: flex;
+      gap: 24px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .stats-row span strong { color: var(--text); font-weight: 600; }
+    .empty-state {
+      color: var(--muted);
+      font-size: 14px;
+      padding: 20px 0;
+      text-align: center;
+    }
+    .error {
+      color: var(--bad);
+      font-size: 13px;
+      padding: 10px 12px;
+      background: rgba(248,81,73,0.08);
+      border: 1px solid rgba(248,81,73,0.3);
+      border-radius: 6px;
+    }
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .stat-card .label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .stat-card .value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-card .sub {
+      font-size: 11px;
+      color: var(--muted-2);
+      margin-top: 2px;
+    }
+    .bridges {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .bridges .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .bridges .row .rank {
+      color: var(--muted);
+      width: 24px;
+      font-variant-numeric: tabular-nums;
+    }
+    .bridges .row .name {
+      flex: 1;
+      font-weight: 600;
+    }
+    .bridges .row .name a { color: inherit; text-decoration: none; }
+    .bridges .row .name a:hover { color: var(--accent); }
+    .bridges .row .count {
       color: var(--muted);
       font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .bar {
+      height: 6px;
+      background: var(--accent-soft);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .bar > div { height: 100%; background: var(--accent); border-radius: 3px; }
+    .running { color: var(--muted); font-size: 13px; padding: 8px 0; }
+    .running .spinner {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid var(--border-strong);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .footer {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 11px;
       line-height: 1.6;
     }
     .footer code {
@@ -188,259 +488,829 @@
       padding: 1px 6px;
       border-radius: 3px;
       border: 1px solid var(--border);
-    }
-    .badge {
-      display: inline-block;
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      margin-left: 8px;
-      vertical-align: middle;
-      font-weight: 600;
-      letter-spacing: 0.04em;
+      color: var(--text);
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Six Degrees of Wikipedia <span class="badge">DEMO</span></h1>
-    <p class="sub">
-      Type two articles and the BFS engine finds the shortest hyperlink path between them.
-      This demo runs in your browser on a 16-article test graph; the real project is the
-      <strong>Java application</strong> in this folder, which runs the identical algorithm
-      over Stanford SNAP's 1.79&nbsp;million-article Wikipedia graph.
-    </p>
+  <div class="app">
+    <header class="top">
+      <h1>WikiPath <span class="badge">BFS over Wikipedia</span></h1>
+      <span id="modeTag" class="mode-tag demo">demo (static)</span>
+      <div class="stats">
+        <span><strong id="statNodes">&mdash;</strong> nodes</span>
+        <span><strong id="statEdges">&mdash;</strong> edges</span>
+      </div>
+    </header>
 
-    <div class="panel">
-      <div class="row">
-        <div>
+    <aside class="sidebar">
+      <div class="section">
+        <h2>Find shortest path</h2>
+        <div class="field">
           <label for="src">Source article</label>
-          <input id="src" type="text" placeholder="Kanye West" autocomplete="off" />
+          <input id="src" type="text" placeholder="Kanye West" autocomplete="off" spellcheck="false" />
+          <div id="srcSuggest" class="suggest"></div>
         </div>
-        <div>
+        <div class="field">
           <label for="tgt">Target article</label>
-          <input id="tgt" type="text" placeholder="Quantum mechanics" autocomplete="off" />
+          <input id="tgt" type="text" placeholder="Quantum mechanics" autocomplete="off" spellcheck="false" />
+          <div id="tgtSuggest" class="suggest"></div>
+        </div>
+        <div class="actions">
+          <button id="go" class="primary">Find path</button>
+          <button id="random" class="secondary">Random pair</button>
+          <button id="swap" class="ghost" title="Swap source and target">&#8646;</button>
+        </div>
+        <div id="examples" class="examples"></div>
+      </div>
+
+      <div class="section">
+        <h2>Random-pair analysis</h2>
+        <div class="field">
+          <label for="trials">Sample size</label>
+          <input id="trials" type="number" value="100" min="1" max="5000" step="10" />
+        </div>
+        <div class="actions">
+          <button id="runAnalysis" class="primary">Run analysis</button>
         </div>
       </div>
 
-      <div class="actions">
-        <button id="go">Find shortest path</button>
-        <button id="random" class="secondary">Random pair</button>
-        <span class="meta" id="meta"></span>
+      <div class="section">
+        <h2>
+          History
+          <button id="clearHistory" class="ghost" title="Clear history">clear</button>
+        </h2>
+        <div id="history" class="history"></div>
       </div>
+    </aside>
 
-      <div class="examples" id="examples"></div>
+    <main class="main">
+      <section id="vizPanel" class="panel">
+        <h2>Path visualization</h2>
+        <div id="vizWrap">
+          <svg id="viz" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="legend">
+            <span><span class="dot" style="background: var(--accent)"></span>Path node</span>
+            <span><span class="dot" style="background: var(--panel-3); border:1px solid var(--border-strong)"></span>1-hop neighbor</span>
+          </div>
+        </div>
+      </section>
 
-      <div class="result empty" id="result">
-        Click <em>Find shortest path</em> to run BFS.
+      <section id="resultPanel" class="panel">
+        <h2>Result</h2>
+        <div id="result" class="empty-state">Enter two article titles and hit <em>Find path</em>.</div>
+      </section>
+
+      <section id="analysisPanel" class="panel" style="display:none;">
+        <h2>Analysis</h2>
+        <div id="analysis"></div>
+      </section>
+
+      <div class="footer">
+        Backend mode runs Java BFS in-memory; the browser only fetches results.
+        Start it with <code>java -Xmx4g -cp target/classes wikipath.Main --serve</code>
+        and open <code>http://localhost:8080</code>.
       </div>
-    </div>
-
-    <div class="footer">
-      <strong>About this demo.</strong> The same BFS implemented here in JavaScript is what the
-      Java project (<code>src/main/java/wikipath/PathFinder.java</code>) runs at scale. To run
-      the real thing on the full SNAP graph:
-      <br />
-      &nbsp;&nbsp;<code>./scripts/download-data.sh</code>
-      <br />
-      &nbsp;&nbsp;<code>java -Xmx2g -cp target/classes wikipath.Main path "Kanye West" "Quantum mechanics"</code>
-    </div>
+    </main>
   </div>
 
   <script>
-    // BFS over a directed graph stored as an adjacency list.
-    // Mirrors the algorithm in PathFinder.java exactly.
-    function bfsShortestPath(adj, src, tgt) {
-      const t0 = performance.now();
-      if (src === tgt) {
-        return { path: [src], hops: 0, visited: 1, ms: 0 };
+    // -------------------------------------------------------------------
+    // Mode detection: live (Java backend) vs demo (static graph.json BFS).
+    // -------------------------------------------------------------------
+    const STATE = {
+      mode: "demo",
+      info: { nodes: 0, edges: 0, hasTitles: false },
+      lastResult: null,
+      // demo-only fallback graph
+      demoNames: null,
+      demoAdj: null,
+      demoTitleToId: null,
+    };
+
+    const HISTORY_KEY = "wikipath.history.v1";
+
+    const $ = id => document.getElementById(id);
+
+    function normalize(s) {
+      return s.trim().replace(/[\s_]+/g, "_").toLowerCase();
+    }
+
+    function wikiUrl(title) {
+      return "https://en.wikipedia.org/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
+    }
+
+    async function fetchJson(url) {
+      const r = await fetch(url);
+      if (!r.ok && r.status !== 404) throw new Error("HTTP " + r.status);
+      return r.json();
+    }
+
+    async function detectMode() {
+      try {
+        const info = await fetchJson("/api/info");
+        if (typeof info.nodes === "number") {
+          STATE.mode = "live";
+          STATE.info = info;
+          $("modeTag").textContent = "live backend";
+          $("modeTag").classList.remove("demo");
+          $("modeTag").classList.add("live");
+          $("statNodes").textContent = info.nodes.toLocaleString();
+          $("statEdges").textContent = info.edges.toLocaleString();
+          return;
+        }
+      } catch (e) {
+        // fall through to demo mode
       }
+      await loadDemoGraph();
+    }
+
+    async function loadDemoGraph() {
+      try {
+        const r = await fetch("graph.json");
+        if (!r.ok) throw new Error("no graph.json");
+        const g = await r.json();
+        const n = g.names.length;
+        const adj = Array.from({ length: n }, () => []);
+        for (const [u, v] of g.edges) adj[u].push(v);
+        const map = new Map();
+        g.names.forEach((name, id) => map.set(normalize(name), id));
+        STATE.demoNames = g.names;
+        STATE.demoAdj = adj;
+        STATE.demoTitleToId = map;
+        STATE.info = { nodes: n, edges: g.edges.length, hasTitles: true };
+        $("statNodes").textContent = n.toLocaleString();
+        $("statEdges").textContent = g.edges.length.toLocaleString();
+      } catch (e) {
+        showError($("result"),
+          "No backend found and no graph.json fallback. " +
+          "Start the Java server with: java -cp target/classes wikipath.Main --serve demo-data/edges.txt demo-data/names.txt");
+      }
+    }
+
+    // -------------------------------------------------------------------
+    // Demo BFS (used when there is no live backend).
+    // -------------------------------------------------------------------
+    function demoBfs(srcId, tgtId) {
+      const t0 = performance.now();
+      const adj = STATE.demoAdj;
+      if (srcId === tgtId) return { path: [srcId], hops: 0, ms: 0 };
       const parent = new Int32Array(adj.length).fill(-1);
-      parent[src] = src;
-      const queue = [src];
+      parent[srcId] = srcId;
+      const queue = [srcId];
       let head = 0;
-      let visited = 1;
       let found = false;
       while (head < queue.length) {
         const u = queue[head++];
-        const nbrs = adj[u];
-        for (let i = 0; i < nbrs.length; i++) {
-          const v = nbrs[i];
+        for (const v of adj[u]) {
           if (parent[v] === -1) {
             parent[v] = u;
-            visited++;
-            if (v === tgt) { found = true; break; }
+            if (v === tgtId) { found = true; break; }
             queue.push(v);
           }
         }
         if (found) break;
       }
       const ms = performance.now() - t0;
-      if (parent[tgt] === -1) return { path: [], hops: -1, visited, ms };
+      if (parent[tgtId] === -1) return { path: [], hops: -1, ms };
       const path = [];
-      let cur = tgt;
-      while (true) {
+      for (let cur = tgtId; ; cur = parent[cur]) {
         path.push(cur);
-        if (cur === src) break;
-        cur = parent[cur];
+        if (cur === srcId) break;
       }
       path.reverse();
-      return { path, hops: path.length - 1, visited, ms };
+      return { path, hops: path.length - 1, ms };
     }
 
-    // Title normalization matching TitleIndex.java: lowercase, collapse runs
-    // of whitespace/underscores into single underscores.
-    function normalize(s) {
-      let out = "";
-      let lastSep = true;
-      for (const c of s) {
-        if (c === " " || c === "_" || c === "\t") {
-          if (!lastSep) { out += "_"; lastSep = true; }
-        } else {
-          out += c.toLowerCase();
-          lastSep = false;
+    function demoNeighborhoods(path) {
+      const adj = STATE.demoAdj;
+      const onPath = new Set(path);
+      return path.map(id => {
+        const ns = [];
+        for (const v of adj[id]) {
+          if (onPath.has(v)) continue;
+          ns.push({ id: v, title: STATE.demoNames[v] });
+          if (ns.length >= 4) break;
         }
-      }
-      if (out.endsWith("_")) out = out.slice(0, -1);
-      return out;
+        return { id, neighbors: ns };
+      });
     }
 
-    let GRAPH = null;
-    let ADJ = null;
-    let TITLE_TO_ID = null;
-
-    async function loadGraph() {
-      const resp = await fetch("graph.json");
-      if (!resp.ok) throw new Error("Failed to load graph.json (" + resp.status + ")");
-      const g = await resp.json();
-      const n = g.names.length;
-      const adj = Array.from({ length: n }, () => []);
-      for (const [u, v] of g.edges) adj[u].push(v);
-      const map = new Map();
-      g.names.forEach((name, id) => map.set(normalize(name), id));
-      GRAPH = g;
-      ADJ = adj;
-      TITLE_TO_ID = map;
-    }
-
-    function findId(text) {
-      if (!text) return -1;
-      const id = TITLE_TO_ID.get(normalize(text));
+    function demoFindId(text) {
+      const id = STATE.demoTitleToId.get(normalize(text));
       return id === undefined ? -1 : id;
     }
 
-    function renderResult(srcText, tgtText) {
-      const result = document.getElementById("result");
-      const meta = document.getElementById("meta");
-      result.classList.remove("empty");
-      result.innerHTML = "";
-      meta.textContent = "";
+    // -------------------------------------------------------------------
+    // Path search (dispatches to live or demo).
+    // -------------------------------------------------------------------
+    async function findPath(srcText, tgtText) {
+      if (STATE.mode === "live") {
+        const url = "/api/path?src=" + encodeURIComponent(srcText)
+                  + "&tgt=" + encodeURIComponent(tgtText)
+                  + "&neighbors=true";
+        const r = await fetchJson(url);
+        return r;
+      }
+      if (!STATE.demoAdj) {
+        return { error: "demo graph not loaded" };
+      }
+      const sId = demoFindId(srcText);
+      const tId = demoFindId(tgtText);
+      if (sId < 0) return { error: "Source article not found in demo graph: \"" + srcText + "\"" };
+      if (tId < 0) return { error: "Target article not found in demo graph: \"" + tgtText + "\"" };
+      const r = demoBfs(sId, tId);
+      const source = { id: sId, title: STATE.demoNames[sId] };
+      const target = { id: tId, title: STATE.demoNames[tId] };
+      if (r.hops < 0) return { source, target, found: false, hops: -1, ms: r.ms, path: [] };
+      const path = r.path.map(id => ({ id, title: STATE.demoNames[id] }));
+      const neighborhoods = demoNeighborhoods(r.path);
+      return { source, target, found: true, hops: r.hops, ms: r.ms, path, neighborhoods };
+    }
 
-      const sId = findId(srcText);
-      const tId = findId(tgtText);
-      if (sId < 0) {
-        result.innerHTML = '<div class="error">Source article not found in demo graph: "' + srcText + '"</div>';
+    // -------------------------------------------------------------------
+    // Suggestions.
+    // -------------------------------------------------------------------
+    async function suggest(prefix, limit) {
+      if (!prefix) return [];
+      if (STATE.mode === "live") {
+        const r = await fetchJson("/api/suggest?q=" + encodeURIComponent(prefix) + "&limit=" + limit);
+        return r.suggestions || [];
+      }
+      if (!STATE.demoNames) return [];
+      const norm = normalize(prefix);
+      const out = [];
+      for (let i = 0; i < STATE.demoNames.length && out.length < limit; i++) {
+        if (normalize(STATE.demoNames[i]).startsWith(norm)) {
+          out.push({ id: i, title: STATE.demoNames[i] });
+        }
+      }
+      return out;
+    }
+
+    function attachAutocomplete(inputId, suggestId) {
+      const input = $(inputId);
+      const box = $(suggestId);
+      let activeIdx = -1;
+      let items = [];
+      let debounceTimer = null;
+
+      const close = () => { box.classList.remove("open"); box.innerHTML = ""; activeIdx = -1; items = []; };
+
+      const render = list => {
+        items = list;
+        activeIdx = -1;
+        if (list.length === 0) { close(); return; }
+        box.innerHTML = list.map((s, i) =>
+          '<div class="item" data-idx="' + i + '">' + escapeHtml(s.title) + '</div>'
+        ).join("");
+        box.classList.add("open");
+      };
+
+      const update = () => {
+        const v = input.value.trim();
+        if (!v) { close(); return; }
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+          try {
+            const list = await suggest(v, 10);
+            render(list);
+          } catch (e) { /* ignore */ }
+        }, 120);
+      };
+
+      input.addEventListener("input", update);
+      input.addEventListener("focus", update);
+      input.addEventListener("blur", () => setTimeout(close, 150));
+      input.addEventListener("keydown", e => {
+        if (!box.classList.contains("open")) return;
+        if (e.key === "ArrowDown") { e.preventDefault(); activeIdx = (activeIdx + 1) % items.length; markActive(); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); activeIdx = (activeIdx - 1 + items.length) % items.length; markActive(); }
+        else if (e.key === "Enter") {
+          if (activeIdx >= 0) {
+            e.preventDefault();
+            input.value = items[activeIdx].title;
+            close();
+          }
+        } else if (e.key === "Escape") { close(); }
+      });
+      box.addEventListener("mousedown", e => {
+        const target = e.target.closest(".item");
+        if (!target) return;
+        e.preventDefault();
+        const idx = parseInt(target.dataset.idx, 10);
+        input.value = items[idx].title;
+        close();
+      });
+
+      function markActive() {
+        box.querySelectorAll(".item").forEach((el, i) => {
+          el.classList.toggle("active", i === activeIdx);
+          if (i === activeIdx) el.scrollIntoView({ block: "nearest" });
+        });
+      }
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+
+    // -------------------------------------------------------------------
+    // Visualization.
+    // -------------------------------------------------------------------
+    function clearViz() {
+      $("viz").innerHTML = "";
+    }
+
+    function renderViz(result) {
+      const svg = $("viz");
+      svg.innerHTML = "";
+      if (!result || !result.path || result.path.length === 0) return;
+
+      const wrap = $("vizWrap");
+      const w = wrap.clientWidth || 800;
+      const h = wrap.clientHeight || 360;
+      svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+
+      const path = result.path;
+      const hoods = result.neighborhoods || [];
+      const pathY = h * 0.5;
+      const marginX = 90;
+      const stepX = path.length === 1 ? 0 : (w - marginX * 2) / (path.length - 1);
+
+      // Position path nodes along a horizontal line.
+      const pathPos = path.map((node, i) => ({
+        id: node.id, title: node.title,
+        x: marginX + i * stepX,
+        y: pathY,
+      }));
+
+      // Position neighbors around each path node in a partial fan.
+      const neighborPos = [];
+      for (let i = 0; i < pathPos.length; i++) {
+        const center = pathPos[i];
+        const hood = hoods.find(hh => hh.id === center.id);
+        const ns = (hood && hood.neighbors) ? hood.neighbors : [];
+        const k = ns.length;
+        if (k === 0) continue;
+        // Alternate above/below so neighbors don't crowd path edges.
+        const radius = Math.min(110, Math.max(70, stepX * 0.55));
+        for (let j = 0; j < k; j++) {
+          const above = j % 2 === 0;
+          const lane = Math.floor(j / 2); // 0,0,1,1,2,2...
+          const angle = (above ? -1 : 1) * (Math.PI / 2 - (lane + 1) * 0.32);
+          neighborPos.push({
+            id: ns[j].id,
+            title: ns[j].title,
+            x: center.x + Math.cos(angle) * radius * 0.6,
+            y: center.y + Math.sin(angle) * radius,
+            from: center,
+          });
+        }
+      }
+
+      // Draw neighbor edges (thin) first.
+      for (const n of neighborPos) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("class", "edge");
+        line.setAttribute("x1", n.from.x);
+        line.setAttribute("y1", n.from.y);
+        line.setAttribute("x2", n.x);
+        line.setAttribute("y2", n.y);
+        svg.appendChild(line);
+      }
+      // Draw path edges (thick) on top.
+      for (let i = 0; i < pathPos.length - 1; i++) {
+        const a = pathPos[i], b = pathPos[i + 1];
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("class", "edge path");
+        line.setAttribute("x1", a.x);
+        line.setAttribute("y1", a.y);
+        line.setAttribute("x2", b.x);
+        line.setAttribute("y2", b.y);
+        line.setAttribute("marker-end", "url(#arrow)");
+        svg.appendChild(line);
+      }
+
+      // Arrow marker
+      const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+      defs.innerHTML =
+        '<marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5"' +
+        ' markerWidth="6" markerHeight="6" orient="auto-start-reverse">' +
+        '<path d="M0,0 L10,5 L0,10 z" fill="#4493f8"/></marker>';
+      svg.appendChild(defs);
+
+      // Draw neighbors.
+      for (const n of neighborPos) {
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("class", "neighbor");
+        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("cx", n.x);
+        c.setAttribute("cy", n.y);
+        c.setAttribute("r", 8);
+        g.appendChild(c);
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("x", n.x);
+        label.setAttribute("y", n.y + 22);
+        label.setAttribute("text-anchor", "middle");
+        label.textContent = truncate(n.title, 18);
+        g.appendChild(label);
+        const t = document.createElementNS("http://www.w3.org/2000/svg", "title");
+        t.textContent = n.title;
+        g.appendChild(t);
+        g.addEventListener("click", () => window.open(wikiUrl(n.title), "_blank"));
+        svg.appendChild(g);
+      }
+
+      // Draw path nodes on top.
+      for (let i = 0; i < pathPos.length; i++) {
+        const p = pathPos[i];
+        const isEnd = (i === 0 || i === pathPos.length - 1);
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("class", "pathnode" + (isEnd ? " endpoint" : ""));
+        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("cx", p.x);
+        c.setAttribute("cy", p.y);
+        c.setAttribute("r", isEnd ? 18 : 14);
+        g.appendChild(c);
+        const num = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        num.setAttribute("x", p.x);
+        num.setAttribute("y", p.y + 4);
+        num.setAttribute("text-anchor", "middle");
+        num.setAttribute("class", "label");
+        num.textContent = i;
+        g.appendChild(num);
+        const lbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        lbl.setAttribute("x", p.x);
+        lbl.setAttribute("y", p.y + (isEnd ? -28 : -22));
+        lbl.setAttribute("text-anchor", "middle");
+        lbl.setAttribute("class", "label");
+        lbl.setAttribute("style", "font-size: " + (isEnd ? 14 : 12) + "px;");
+        lbl.textContent = truncate(p.title, 22);
+        g.appendChild(lbl);
+        const t = document.createElementNS("http://www.w3.org/2000/svg", "title");
+        t.textContent = p.title;
+        g.appendChild(t);
+        g.addEventListener("click", () => window.open(wikiUrl(p.title), "_blank"));
+        svg.appendChild(g);
+      }
+    }
+
+    function truncate(s, n) {
+      const t = s.replace(/_/g, " ");
+      return t.length <= n ? t : t.slice(0, n - 1) + "\u2026";
+    }
+
+    function showError(target, msg) {
+      target.innerHTML = '<div class="error">' + escapeHtml(msg) + "</div>";
+    }
+
+    // -------------------------------------------------------------------
+    // Result rendering.
+    // -------------------------------------------------------------------
+    function renderResult(result) {
+      const r = $("result");
+      r.classList.remove("empty-state");
+      if (result.error) {
+        showError(r, result.error);
+        clearViz();
         return;
       }
-      if (tId < 0) {
-        result.innerHTML = '<div class="error">Target article not found in demo graph: "' + tgtText + '"</div>';
+      if (!result.found) {
+        r.innerHTML =
+          '<div class="error">No hyperlink path was found from "' +
+          escapeHtml(result.source.title) + '" to "' +
+          escapeHtml(result.target.title) + '" (' + result.ms + ' ms).</div>';
+        clearViz();
         return;
       }
-
-      const r = bfsShortestPath(ADJ, sId, tId);
-      meta.textContent = r.hops < 0
-        ? "no path"
-        : r.hops + " hops &middot; " + r.visited + " nodes visited &middot; " + r.ms.toFixed(2) + " ms";
-      meta.innerHTML = meta.textContent;
-
-      if (r.hops < 0) {
-        result.innerHTML = '<div class="error">No path exists from "'
-          + GRAPH.names[sId] + '" to "' + GRAPH.names[tId] + '" in this demo graph.</div>';
-        return;
-      }
-
-      const h3 = document.createElement("h3");
-      h3.textContent = "Shortest hyperlink path";
-      result.appendChild(h3);
-
       const list = document.createElement("div");
-      list.className = "path";
-      r.path.forEach((id, i) => {
-        const step = document.createElement("div");
-        step.className = "step" + (i === 0 || i === r.path.length - 1 ? " endpoint" : "");
-        step.innerHTML = '<span class="num">' + i + "</span><span>" + GRAPH.names[id] + "</span>";
+      list.className = "path-list";
+      result.path.forEach((node, i) => {
+        const isEnd = (i === 0 || i === result.path.length - 1);
+        const step = document.createElement("span");
+        step.className = "step" + (isEnd ? " endpoint" : "");
+        step.innerHTML = '<span class="num">' + i + '</span>' +
+          '<a href="' + wikiUrl(node.title) + '" target="_blank" rel="noopener">' +
+          escapeHtml(node.title.replace(/_/g, " ")) + "</a>";
         list.appendChild(step);
-        if (i < r.path.length - 1) {
-          const a = document.createElement("div");
+        if (i < result.path.length - 1) {
+          const a = document.createElement("span");
           a.className = "arrow";
-          a.textContent = "↓";
+          a.textContent = "\u2192";
           list.appendChild(a);
         }
       });
-      result.appendChild(list);
-
       const stats = document.createElement("div");
-      stats.className = "stats";
+      stats.className = "stats-row";
       stats.innerHTML =
-        '<span><strong>' + r.hops + '</strong> hops</span>' +
-        '<span><strong>' + r.visited + '</strong> nodes visited</span>' +
-        '<span><strong>' + r.ms.toFixed(2) + '</strong> ms</span>';
-      result.appendChild(stats);
+        '<span><strong>' + result.hops + '</strong> hops</span>' +
+        '<span><strong>' + result.ms + '</strong> ms</span>' +
+        '<span><strong>' + result.path.length + '</strong> articles in path</span>';
+      r.innerHTML = "";
+      r.appendChild(list);
+      r.appendChild(stats);
+
+      renderViz(result);
+    }
+
+    // -------------------------------------------------------------------
+    // Analysis.
+    // -------------------------------------------------------------------
+    async function runAnalysis(trials) {
+      const container = $("analysisPanel");
+      const body = $("analysis");
+      container.style.display = "";
+      body.innerHTML = '<div class="running"><span class="spinner"></span>Sampling ' + trials + ' random pairs ...</div>';
+
+      try {
+        let data;
+        if (STATE.mode === "live") {
+          data = await fetchJson("/api/analysis?trials=" + trials);
+        } else {
+          data = demoAnalysis(trials);
+        }
+        renderAnalysis(data);
+      } catch (e) {
+        showError(body, "Analysis failed: " + e.message);
+      }
+    }
+
+    function demoAnalysis(trials) {
+      const adj = STATE.demoAdj;
+      const names = STATE.demoNames;
+      const t0 = performance.now();
+      const bridges = new Map();
+      let totalHops = 0, reachable = 0, edges = 0, localBridges = 0, totalOverlap = 0, totalCluster = 0;
+      const nNodes = names.length;
+      for (let t = 0; t < trials; t++) {
+        let s = (Math.random() * nNodes) | 0;
+        let g = (Math.random() * nNodes) | 0;
+        while (g === s) g = (Math.random() * nNodes) | 0;
+        totalCluster += clusteringCoeff(adj, s);
+        const r = demoBfs(s, g);
+        if (r.hops < 0) continue;
+        reachable++;
+        totalHops += r.hops;
+        for (let i = 1; i < r.path.length - 1; i++) {
+          const id = r.path[i];
+          bridges.set(id, (bridges.get(id) || 0) + 1);
+        }
+        for (let i = 0; i < r.path.length - 1; i++) {
+          const o = overlap(adj, r.path[i], r.path[i+1]);
+          totalOverlap += o;
+          edges++;
+          if (o === 0) localBridges++;
+        }
+      }
+      const top = [...bridges.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10).map(([id,c])=>({
+        article: { id, title: names[id] },
+        count: c,
+      }));
+      return {
+        trials, reachablePairs: reachable,
+        averagePathLength: reachable ? totalHops/reachable : 0,
+        averageLocalClustering: totalCluster/trials,
+        averageNeighborhoodOverlap: edges ? totalOverlap/edges : 0,
+        localBridgeEdges: localBridges,
+        pathEdgesChecked: edges,
+        ms: Math.round(performance.now() - t0),
+        topBridges: top,
+      };
+    }
+
+    function clusteringCoeff(adj, id) {
+      const ns = adj[id];
+      const k = ns.length;
+      if (k < 2) return 0;
+      const set = new Set(ns);
+      let connected = 0;
+      for (let i = 0; i < k; i++) {
+        const inner = new Set(adj[ns[i]]);
+        for (let j = 0; j < k; j++) {
+          if (i === j) continue;
+          if (inner.has(ns[j])) connected++;
+        }
+      }
+      return connected / (k * (k - 1));
+    }
+
+    function overlap(adj, u, v) {
+      const a = new Set(adj[u]);
+      const b = new Set(adj[v]);
+      if (a.size === 0 && b.size === 0) return 0;
+      let inter = 0;
+      for (const x of a) if (b.has(x)) inter++;
+      const union = new Set([...a, ...b]).size;
+      return inter / union;
+    }
+
+    function renderAnalysis(d) {
+      const cards = [
+        { label: "Trials", value: d.trials, sub: "random pairs" },
+        { label: "Reachable", value: d.reachablePairs, sub: "of " + d.trials },
+        { label: "Avg path length", value: d.averagePathLength.toFixed(2), sub: "hops" },
+        { label: "Avg clustering", value: d.averageLocalClustering.toFixed(3), sub: "of source nodes" },
+        { label: "Avg overlap", value: d.averageNeighborhoodOverlap.toFixed(3), sub: "on path edges" },
+        { label: "Local bridges", value: d.localBridgeEdges, sub: "of " + d.pathEdgesChecked + " path edges" },
+        { label: "Total time", value: d.ms + " ms", sub: "BFS + measures" },
+      ];
+      const grid = '<div class="analysis-grid">' + cards.map(c =>
+        '<div class="stat-card"><div class="label">' + c.label + '</div><div class="value">' +
+        c.value + '</div><div class="sub">' + c.sub + '</div></div>'
+      ).join("") + "</div>";
+
+      let bridges;
+      if (!d.topBridges || d.topBridges.length === 0) {
+        bridges = '<div class="empty-state">No bridge articles in this sample.</div>';
+      } else {
+        const max = Math.max(...d.topBridges.map(b => b.count));
+        bridges = '<h3 style="font-size:13px; color: var(--muted); margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.04em;">Top bridge articles</h3>';
+        bridges += '<div class="bridges">' + d.topBridges.map((b, i) =>
+          '<div class="row">' +
+            '<span class="rank">' + (i + 1) + '</span>' +
+            '<span class="name">' +
+              '<a href="' + wikiUrl(b.article.title) + '" target="_blank" rel="noopener">' +
+              escapeHtml(b.article.title.replace(/_/g, " ")) + '</a>' +
+              '<div class="bar"><div style="width:' + ((b.count/max)*100).toFixed(0) + '%"></div></div>' +
+            '</span>' +
+            '<span class="count">' + b.count + ' &middot; ' +
+              ((b.count / Math.max(1, d.reachablePairs)) * 100).toFixed(0) + '%</span>' +
+          '</div>'
+        ).join("") + "</div>";
+      }
+
+      $("analysis").innerHTML = grid + bridges;
+    }
+
+    // -------------------------------------------------------------------
+    // History.
+    // -------------------------------------------------------------------
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) { return []; }
+    }
+    function saveHistory(items) {
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 25))); } catch (e) {}
+    }
+    function pushHistory(srcText, tgtText, hops) {
+      const items = loadHistory();
+      items.unshift({ src: srcText, tgt: tgtText, hops, t: Date.now() });
+      const seen = new Set();
+      const dedup = items.filter(it => {
+        const k = it.src.toLowerCase() + " -> " + it.tgt.toLowerCase();
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      saveHistory(dedup);
+      renderHistory();
+    }
+    function renderHistory() {
+      const items = loadHistory();
+      const box = $("history");
+      if (items.length === 0) {
+        box.innerHTML = '<div class="empty">No searches yet.</div>';
+        return;
+      }
+      box.innerHTML = items.map((it, i) =>
+        '<div class="row" data-idx="' + i + '">' +
+          '<span class="pair">' +
+            escapeHtml(it.src.replace(/_/g," ")) + ' &rarr; ' + escapeHtml(it.tgt.replace(/_/g," ")) +
+          '</span>' +
+          '<span class="meta">' + (it.hops < 0 ? "no path" : it.hops + " hops") + '</span>' +
+        '</div>'
+      ).join("");
+      box.querySelectorAll(".row").forEach(el => {
+        el.addEventListener("click", () => {
+          const idx = parseInt(el.dataset.idx, 10);
+          const it = items[idx];
+          $("src").value = it.src;
+          $("tgt").value = it.tgt;
+          handleFind();
+        });
+      });
+    }
+
+    // -------------------------------------------------------------------
+    // Wiring.
+    // -------------------------------------------------------------------
+    async function handleFind() {
+      const s = $("src").value.trim();
+      const t = $("tgt").value.trim();
+      const r = $("result");
+      if (!s || !t) {
+        showError(r, "Both source and target are required.");
+        clearViz();
+        return;
+      }
+      r.classList.remove("empty-state");
+      r.innerHTML = '<div class="running"><span class="spinner"></span>Running BFS ...</div>';
+      try {
+        const result = await findPath(s, t);
+        STATE.lastResult = result;
+        renderResult(result);
+        if (!result.error) {
+          pushHistory(result.source ? result.source.title : s,
+                      result.target ? result.target.title : t,
+                      result.found ? result.hops : -1);
+        }
+      } catch (e) {
+        showError(r, "Request failed: " + e.message);
+        clearViz();
+      }
+    }
+
+    async function handleRandom() {
+      try {
+        if (STATE.mode === "live") {
+          const r = await fetchJson("/api/random");
+          $("src").value = r.source.title;
+          $("tgt").value = r.target.title;
+        } else {
+          const n = STATE.demoNames.length;
+          let s = (Math.random()*n)|0, g = (Math.random()*n)|0;
+          while (g === s) g = (Math.random()*n)|0;
+          $("src").value = STATE.demoNames[s];
+          $("tgt").value = STATE.demoNames[g];
+        }
+        handleFind();
+      } catch (e) {
+        showError($("result"), "Random failed: " + e.message);
+      }
+    }
+
+    function handleSwap() {
+      const s = $("src").value;
+      $("src").value = $("tgt").value;
+      $("tgt").value = s;
     }
 
     function renderExamples() {
-      const examples = [
+      const live = [
         ["Kanye West", "Quantum mechanics"],
-        ["Kanye West", "Mathematics"],
+        ["Albert Einstein", "Beyonce"],
+        ["Philosophy", "Donut"],
+        ["The Beatles", "Cryptography"],
+      ];
+      const demo = [
+        ["Kanye West", "Quantum mechanics"],
         ["Concert", "Rap"],
         ["Album", "Wave"],
         ["Producer", "Mathematics"],
       ];
-      const box = document.getElementById("examples");
-      examples.forEach(([s, t]) => {
+      const list = STATE.mode === "live" ? live : demo;
+      const box = $("examples");
+      box.innerHTML = "";
+      list.forEach(([s, t]) => {
         const b = document.createElement("button");
-        b.textContent = s + " → " + t;
+        b.textContent = s + " \u2192 " + t;
         b.onclick = () => {
-          document.getElementById("src").value = s;
-          document.getElementById("tgt").value = t;
-          renderResult(s, t);
+          $("src").value = s;
+          $("tgt").value = t;
+          handleFind();
         };
         box.appendChild(b);
       });
     }
 
-    function randomPair() {
-      const n = GRAPH.names.length;
-      let s, t;
-      do { s = Math.floor(Math.random() * n); t = Math.floor(Math.random() * n); } while (s === t);
-      const sN = GRAPH.names[s], tN = GRAPH.names[t];
-      document.getElementById("src").value = sN;
-      document.getElementById("tgt").value = tN;
-      renderResult(sN, tN);
-    }
-
     document.addEventListener("DOMContentLoaded", async () => {
-      try {
-        await loadGraph();
-      } catch (e) {
-        document.getElementById("result").innerHTML =
-          '<div class="error">Could not load graph.json. Make sure you opened this page via Live Server (not as <code>file://</code>) so the browser can fetch it.</div>';
-        return;
-      }
+      await detectMode();
+      attachAutocomplete("src", "srcSuggest");
+      attachAutocomplete("tgt", "tgtSuggest");
       renderExamples();
-      document.getElementById("go").onclick = () => {
-        renderResult(
-          document.getElementById("src").value,
-          document.getElementById("tgt").value
-        );
-      };
-      document.getElementById("random").onclick = randomPair;
+      renderHistory();
+
+      $("go").addEventListener("click", handleFind);
+      $("random").addEventListener("click", handleRandom);
+      $("swap").addEventListener("click", handleSwap);
+      $("runAnalysis").addEventListener("click", () => {
+        const t = parseInt($("trials").value, 10);
+        if (!t || t < 1) return;
+        runAnalysis(t);
+      });
+      $("clearHistory").addEventListener("click", () => {
+        localStorage.removeItem(HISTORY_KEY);
+        renderHistory();
+      });
       ["src", "tgt"].forEach(id => {
-        document.getElementById(id).addEventListener("keydown", e => {
-          if (e.key === "Enter") document.getElementById("go").click();
+        $(id).addEventListener("keydown", e => {
+          if (e.key === "Enter") {
+            // Only trigger search if no autocomplete item is active.
+            const sb = $(id === "src" ? "srcSuggest" : "tgtSuggest");
+            if (!sb.classList.contains("open") || !sb.querySelector(".item.active")) {
+              handleFind();
+            }
+          }
         });
+      });
+
+      window.addEventListener("resize", () => {
+        if (STATE.lastResult) renderViz(STATE.lastResult);
       });
     });
   </script>

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Stores the Wikipedia hyperlink graph as an adjacency list.
@@ -21,6 +22,11 @@ public class WikiGraph {
     private final HashMap<Integer, String> idToTitle;
     private final HashSet<Integer> articleIds;
     private int edgeCount;
+
+    // Sorted normalized titles for prefix autocomplete. Built lazily because it
+    // is only needed by the web UI, not by the menu program.
+    private String[] sortedTitles;
+    private int[] sortedTitleIds;
 
     public WikiGraph() {
         adjacencyList = new HashMap<>();
@@ -153,6 +159,72 @@ public class WikiGraph {
 
     public boolean hasTitles() {
         return !titleToId.isEmpty();
+    }
+
+    /**
+     * Returns up to {@code limit} article IDs whose normalized titles begin
+     * with the given prefix. Useful for type-ahead suggestions in the web UI.
+     *
+     * The first call builds a sorted index of all titles, which is O(n log n)
+     * but only happens once. Each subsequent call is O(log n + limit).
+     */
+    public List<Integer> searchTitlePrefix(String prefix, int limit) {
+        if (prefix == null || titleToId.isEmpty() || limit <= 0) {
+            return new ArrayList<>();
+        }
+        ensureSortedTitleIndex();
+
+        String normalizedPrefix = normalizeTitle(prefix);
+        int start = lowerBound(sortedTitles, normalizedPrefix);
+        ArrayList<Integer> results = new ArrayList<>();
+        for (int i = start; i < sortedTitles.length && results.size() < limit; i++) {
+            if (!sortedTitles[i].startsWith(normalizedPrefix)) {
+                break;
+            }
+            results.add(sortedTitleIds[i]);
+        }
+        return results;
+    }
+
+    private synchronized void ensureSortedTitleIndex() {
+        if (sortedTitles != null) {
+            return;
+        }
+        ArrayList<String> norms = new ArrayList<>(titleToId.size());
+        ArrayList<Integer> ids = new ArrayList<>(titleToId.size());
+        for (Map.Entry<String, Integer> e : titleToId.entrySet()) {
+            norms.add(e.getKey());
+            ids.add(e.getValue());
+        }
+        Integer[] indices = new Integer[norms.size()];
+        for (int i = 0; i < indices.length; i++) {
+            indices[i] = i;
+        }
+        java.util.Arrays.sort(indices, (a, b) -> norms.get(a).compareTo(norms.get(b)));
+
+        String[] sortedNorms = new String[norms.size()];
+        int[] sortedIds = new int[norms.size()];
+        for (int i = 0; i < indices.length; i++) {
+            int idx = indices[i];
+            sortedNorms[i] = norms.get(idx);
+            sortedIds[i] = ids.get(idx);
+        }
+        sortedTitles = sortedNorms;
+        sortedTitleIds = sortedIds;
+    }
+
+    private static int lowerBound(String[] arr, String key) {
+        int lo = 0;
+        int hi = arr.length;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (arr[mid].compareTo(key) < 0) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        return lo;
     }
 
     private String normalizeTitle(String title) {

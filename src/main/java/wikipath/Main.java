@@ -1,27 +1,59 @@
 package wikipath;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 /**
  * Menu-driven program for the WikiPath project.
+ *
+ * Also supports a {@code --serve} flag that starts a local HTTP server so the
+ * graph can be queried from a browser-based UI in the {@code web/} folder.
  */
 public class Main {
 
     private static final String DEFAULT_EDGE_FILE = "data/wiki-topcats.txt";
     private static final String DEFAULT_TITLE_FILE = "data/wiki-topcats-page-names.txt";
+    private static final int DEFAULT_PORT = 8080;
 
     public static void main(String[] args) {
-        String edgeFile = DEFAULT_EDGE_FILE;
-        String titleFile = DEFAULT_TITLE_FILE;
+        boolean serve = false;
+        int port = DEFAULT_PORT;
+        ArrayList<String> positional = new ArrayList<>();
 
-        if (args.length >= 1) {
-            edgeFile = args[0];
+        for (int i = 0; i < args.length; i++) {
+            String a = args[i];
+            if (a.equals("--serve") || a.equals("-s")) {
+                serve = true;
+            } else if (a.equals("--port") || a.equals("-p")) {
+                if (i + 1 >= args.length) {
+                    System.out.println("--port requires a value");
+                    return;
+                }
+                try {
+                    port = Integer.parseInt(args[++i]);
+                } catch (NumberFormatException e) {
+                    System.out.println("--port must be a number");
+                    return;
+                }
+            } else if (a.startsWith("--port=")) {
+                try {
+                    port = Integer.parseInt(a.substring("--port=".length()));
+                } catch (NumberFormatException e) {
+                    System.out.println("--port must be a number");
+                    return;
+                }
+            } else if (a.equals("-h") || a.equals("--help")) {
+                printUsage();
+                return;
+            } else {
+                positional.add(a);
+            }
         }
-        if (args.length >= 2) {
-            titleFile = args[1];
-        }
+
+        String edgeFile = positional.size() >= 1 ? positional.get(0) : DEFAULT_EDGE_FILE;
+        String titleFile = positional.size() >= 2 ? positional.get(1) : DEFAULT_TITLE_FILE;
 
         WikiGraph graph = new WikiGraph();
 
@@ -43,6 +75,19 @@ public class Main {
             System.out.println("Try passing file paths as command-line arguments:");
             System.out.println("java -cp target/classes wikipath.Main "
                     + "demo-data/edges.txt demo-data/names.txt");
+            return;
+        }
+
+        if (serve) {
+            try {
+                WebServer server = new WebServer(graph, WebServer.defaultWebRoot());
+                server.start(port);
+                Thread.currentThread().join();
+            } catch (IOException e) {
+                System.out.println("Could not start web server: " + e.getMessage());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             return;
         }
 
@@ -69,6 +114,14 @@ public class Main {
 
         scanner.close();
         System.out.println("Goodbye.");
+    }
+
+    private static void printUsage() {
+        System.out.println("Usage:");
+        System.out.println("  java -cp target/classes wikipath.Main [edges] [titles]");
+        System.out.println("  java -cp target/classes wikipath.Main --serve [edges] [titles] [--port 8080]");
+        System.out.println();
+        System.out.println("Defaults: edges=" + DEFAULT_EDGE_FILE + " titles=" + DEFAULT_TITLE_FILE);
     }
 
     private static void printMenu() {
