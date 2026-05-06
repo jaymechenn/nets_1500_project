@@ -61,11 +61,9 @@ public class Main {
             } else if (choice.equals("2")) {
                 runAnalysisMenu(scanner, analyzer);
             } else if (choice.equals("3")) {
-                analyzer.printTopBridgeArticles(10);
-            } else if (choice.equals("4")) {
                 running = false;
             } else {
-                System.out.println("Please enter 1, 2, 3, or 4.");
+                System.out.println("Please enter 1, 2, or 3.");
             }
         }
 
@@ -77,9 +75,8 @@ public class Main {
         System.out.println();
         System.out.println("WikiPath Menu");
         System.out.println("1. Find shortest path between two articles");
-        System.out.println("2. Run random pair analysis");
-        System.out.println("3. Print top bridge articles");
-        System.out.println("4. Exit");
+        System.out.println("2. Run random pair analysis (also prints top bridge articles)");
+        System.out.println("3. Exit");
         System.out.print("Choose an option: ");
     }
 

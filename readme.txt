@@ -120,9 +120,8 @@ Then choose from the menu:
 ```text
 WikiPath Menu
 1. Find shortest path between two articles
-2. Run random pair analysis
-3. Print top bridge articles
-4. Exit
+2. Run random pair analysis (also prints top bridge articles)
+3. Exit
 Choose an option:
 ```
 

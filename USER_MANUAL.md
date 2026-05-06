@@ -61,9 +61,8 @@ If no command-line arguments are given, the program tries to load:
 ```text
 WikiPath Menu
 1. Find shortest path between two articles
-2. Run random pair analysis
-3. Print top bridge articles
-4. Exit
+2. Run random pair analysis (also prints top bridge articles)
+3. Exit
 Choose an option:
 ```
 
@@ -111,7 +110,8 @@ Enter how many random pairs to sample. The program runs BFS for each pair,
 computes the average shortest path length among reachable pairs, counts
 bridge articles using sampled betweenness centrality, estimates local
 clustering, and measures neighborhood overlap on edges from sampled
-shortest paths.
+shortest paths. The top 10 bridge articles are printed automatically at
+the end of the analysis.
 
 Example:
 
@@ -133,25 +133,9 @@ Average neighborhood overlap on path edges: 0.007
 Local bridge edges on sampled shortest paths: 44 out of 45
 ```
 
-### Option 3: Top Bridge Articles
+### Option 3: Exit
 
-This prints the articles that appeared most often as intermediate nodes in
-the shortest paths from the most recent analysis run.
-
-Example:
-
-```text
-Top 10 bridge articles / sampled betweenness scores:
-1. United_States appeared inside 18 sampled shortest paths
-2. World_War_II appeared inside 10 sampled shortest paths
-3. Mathematics appeared inside 7 sampled shortest paths
-```
-
-If analysis has not been run yet:
-
-```text
-No bridge data yet. Run random pair analysis first.
-```
+Quits the program.
 
 ## Troubleshooting
 
