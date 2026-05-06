@@ -108,8 +108,10 @@ Time to compute: 2 ms
 ### Option 2: Random Pair Analysis
 
 Enter how many random pairs to sample. The program runs BFS for each pair,
-computes the average shortest path length among reachable pairs, and counts
-bridge articles.
+computes the average shortest path length among reachable pairs, counts
+bridge articles using sampled betweenness centrality, estimates local
+clustering, and measures neighborhood overlap on edges from sampled
+shortest paths.
 
 Example:
 
@@ -119,11 +121,16 @@ How many random pairs should be sampled? 100
 Random pair analysis complete.
 Trials: 100
 Reachable pairs: 96
-Average shortest path length: 4.83 hops
-Time to compute: 1250 ms
+Average shortest path length: 2.81 hops
+Time to compute: 21 ms
 
 Small-world interpretation:
 The sampled paths are short, which supports the idea that Wikipedia behaves like a small-world information network.
+
+Extra network measures:
+Average local clustering coefficient: 0.100
+Average neighborhood overlap on path edges: 0.007
+Local bridge edges on sampled shortest paths: 44 out of 45
 ```
 
 ### Option 3: Top Bridge Articles
@@ -134,10 +141,10 @@ the shortest paths from the most recent analysis run.
 Example:
 
 ```text
-Top 10 bridge articles:
-1. United_States appeared in 18 shortest paths
-2. World_War_II appeared in 10 shortest paths
-3. Mathematics appeared in 7 shortest paths
+Top 10 bridge articles / sampled betweenness scores:
+1. United_States appeared inside 18 sampled shortest paths
+2. World_War_II appeared inside 10 sampled shortest paths
+3. Mathematics appeared inside 7 sampled shortest paths
 ```
 
 If analysis has not been run yet:

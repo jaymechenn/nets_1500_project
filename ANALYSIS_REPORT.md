@@ -27,6 +27,14 @@ This project uses several topics from class:
 - Information networks: Wikipedia is an example of a web information network.
 - Small-world structure: random samples can show whether paths tend to be
   short even in a very large graph.
+- Betweenness centrality: articles that appear inside many sampled shortest
+  paths are treated as high-betweenness bridge articles.
+- Local clustering coefficient: checks whether an article's neighbors also
+  link to each other.
+- Neighborhood overlap: measures how similar the neighborhoods are for two
+  linked articles.
+- Local bridges: edges with zero neighborhood overlap connect parts of the
+  graph that do not share neighbors.
 
 ## Why BFS Is Correct
 
@@ -52,6 +60,16 @@ pairs. For each pair, it runs BFS. If the target is reachable, the program:
 Bridge articles are articles that often appear in the middle of shortest
 paths. In a real Wikipedia graph, these tend to be broad, central topics
 such as countries, time periods, sciences, or other common reference pages.
+This is a sampled version of betweenness centrality. Exact betweenness
+centrality would require checking shortest paths between all pairs of
+articles, which is too much for this intro-level project and a graph this
+large. Sampling gives a simpler estimate.
+
+The analyzer also reports local clustering coefficient and neighborhood
+overlap. Local clustering is high when an article links to several articles
+that also link to each other. Neighborhood overlap is high when two linked
+articles point to many of the same other articles. A sampled shortest-path
+edge with zero neighborhood overlap is counted as a local bridge.
 
 ## Sample Results Format
 
@@ -81,17 +99,26 @@ Random-pair analysis:
 Random pair analysis complete.
 Trials: 100
 Reachable pairs: 96
-Average shortest path length: 4.83 hops
-Time to compute: 1250 ms
+Average shortest path length: 2.81 hops
+Time to compute: 21 ms
 ```
 
-Top bridge articles:
+Top bridge articles / sampled betweenness:
 
 ```text
-Top 10 bridge articles:
-1. United_States appeared in 18 shortest paths
-2. World_War_II appeared in 10 shortest paths
-3. Mathematics appeared in 7 shortest paths
+Top 10 bridge articles / sampled betweenness scores:
+1. United_States appeared inside 18 sampled shortest paths
+2. World_War_II appeared inside 10 sampled shortest paths
+3. Mathematics appeared inside 7 sampled shortest paths
+```
+
+Extra network measures:
+
+```text
+Extra network measures:
+Average local clustering coefficient: 0.100
+Average neighborhood overlap on path edges: 0.007
+Local bridge edges on sampled shortest paths: 44 out of 45
 ```
 
 ## Small-World Interpretation
@@ -100,3 +127,16 @@ If the sampled average path length is small compared with the number of
 articles in the graph, that supports the small-world idea. Wikipedia has
 millions of pages, but because broad articles link many topics together,
 many pages can still be connected by only a few hyperlinks.
+
+## Concepts We Do Not Directly Measure
+
+Strong and weak ties are harder to measure here because the SNAP file only
+says whether one article links to another; it does not say how strong that
+link is. Strong triadic closure is also more natural in social networks
+than in a hyperlink graph, because Wikipedia articles do not have
+friendship strengths.
+
+Homophily would require article attributes, such as topic categories,
+political labels, country labels, or subject areas. The basic edge list and
+title map do not provide those labels, so we do not claim to measure
+homophily directly.
