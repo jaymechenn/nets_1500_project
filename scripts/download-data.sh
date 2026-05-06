@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# This sownloads the SNAP wiki-topcats dataset into ./data
+# This downloads the SNAP wiki-topcats dataset into ./data
 #
 set -euo pipefail
 

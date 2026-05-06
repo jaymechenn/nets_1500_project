@@ -1,108 +1,167 @@
-Six Degrees of Wikipedia
-Group members: Kieran, Andreaa, Jayme
+# WikiPath
 
-Our project is a Java application that finds the shortest hyperlink path
-between any two Wikipedia articles, a programmatic version of the "Six
-Degrees of Wikipedia" problem. We built it on the Stanford SNAP
-wiki-topcats dataset, a 2011 snapshot of the Wikipedia hyperlink graph
-containing roughly 1.79 million articles and 28.5 million directed
-links between them. The core algorithm is breadth-first search from the
-source article with parent pointers stored along the way, which lets us
-reconstruct the actual chain of links once we reach the target. On top
-of the path finder, we added a statistical component that estimates the
-average shortest-path length on the graph and identifies the "bridge"
-articles, such as United States, England, and World War II, that show
-up most often as intermediate nodes in random shortest paths. The
-application supports a one-shot CLI query, an interactive REPL that
-loads the graph once and answers many queries, and a bulk statistics
-runner that produces the analysis numbers for our write-up.
+WikiPath is a Java application for finding the shortest hyperlink path
+between two Wikipedia articles. It treats Wikipedia as a directed graph:
+articles are nodes, and hyperlinks are directed edges from one article to
+another. This is a programmatic version of the "Six Degrees of Wikipedia"
+or WikiRace problem.
 
-Categories used
+## Dataset
 
-This project draws on two of the course categories. The primary one is
-Graphs and graph algorithms. We use a directed graph stored in
-compressed sparse row form, BFS to compute single-source shortest paths
-in a unit-weight graph, parent pointers to reconstruct the actual path,
-and a generation-counter trick to reuse BFS state across queries
-without zeroing the 1.79 million-entry parent array between runs. The
-second category is Information Networks and the World Wide Web. The
-Wikipedia hyperlink graph is exactly the kind of small-world network
-covered in lecture, and our statistics confirm the lecture story
-empirically: the mean shortest-path length is about 3.8 hops despite
-the graph having 1.79 million nodes, and the bridge frequency
-distribution is heavily skewed toward a handful of mega-hubs.
+The project uses the Stanford SNAP `wiki-topcats` dataset:
 
-Work breakdown
+https://snap.stanford.edu/data/wiki-topcats.html
 
-Kieran handled the data loading pipeline, including the byte-level
-parser that reads the 430 MB edge file in two passes and builds the CSR
-representation, plus the title index that supports case-insensitive and
-underscore-insensitive article name lookup. Andreaa wrote the BFS
-and path reconstruction logic in PathFinder.java, including the
-generation-counter optimization that makes repeated queries fast. We
-collaborated on the statistics module (mean path length with confidence
-intervals, bridge counting, Wilson intervals on the bridge proportions,
-and the split-half stability check using Spearman's rank correlation),
-on the CLI surface in Main.java, and on debugging the loader against
-smaller subgraphs before running on the full dataset. Jayme prepared
-the demo data and browser demo, checked the command-line workflow, and
-helped write the final README and user manual. All three members
-contributed to testing and to the final project write-up.
+The full dataset files are:
 
-AI usage
+- `wiki-topcats.txt`: edge list, one directed edge per line.
+- `wiki-topcats-page-names.txt`: article ID to title mapping.
 
-We used Claude at a few specific points in the project.
-Early on, we used it to brainstorm scope, in particular whether to
-build the path finder on the full English Wikipedia dump or on the
-smaller SNAP wiki-topcats dataset; Claude helped us reason through the
-memory tradeoffs and we ended up choosing SNAP because it fits
-comfortably in a 2 GB heap on a laptop. We also used Claude as a sanity
-check on the sampling methodology for the statistics section,
-specifically to confirm the form of the Riondato and Kornaropoulos
-sample-size bound for betweenness estimation and to talk through why
-Wilson intervals are more appropriate than the textbook normal
-interval when the bridge-frequency proportions are small. All of the
-Java code, the empirical analysis, and the writing in this readme are
-our own work. Claude was used as a thinking partner during planning,
-not as a code generator.
+The graph is large enough to show real network behavior. It has about
+1.79 million article IDs and 28.5 million directed hyperlinks. The
+repository also includes a small `demo-data/` folder for quick testing,
+including a disconnected example for the "no path found" case.
 
-Changes from proposal:
+## Course Concepts
 
-The original proposal focused on a single shortest-path finder. The
-final project keeps that core feature and adds three concrete extensions:
-an interactive REPL so the graph only has to be loaded once, a statistics
-runner for average path length and bridge-article analysis, and a small
-browser demo that illustrates the same BFS idea on a 16-article toy graph.
+This project uses introductory graph and information network concepts:
 
-How to run
+- Directed graphs: a hyperlink from article A to article B is not the
+  same as a hyperlink from B to A.
+- Nodes and edges: articles are nodes, hyperlinks are edges.
+- Adjacency lists: the graph is stored as
+  `HashMap<Integer, ArrayList<Integer>>`.
+- BFS: shortest paths are found with breadth-first search.
+- Queues: BFS uses `Queue<Integer>` to explore by levels.
+- Discovered sets: `HashSet<Integer>` prevents repeated work and cycles.
+- Parent maps: `HashMap<Integer, Integer>` reconstructs the final path.
+- Information networks: Wikipedia is a web graph.
+- Small-world structure: random-pair analysis checks whether article
+  pairs are often connected by only a few links.
 
-Build the Java classes first if target/classes is missing:
+## How BFS Finds The Shortest Path
 
-  mkdir -p target/classes
-  javac --release 17 -d target/classes src/main/java/wikipath/*.java
+Every hyperlink counts as one hop, so this is an unweighted graph. BFS is
+the right algorithm because it explores all articles one hop away, then
+all articles two hops away, then all articles three hops away, and so on.
+The first time BFS reaches the target article, it has found the minimum
+number of hyperlinks needed to get there.
 
-With the included demo data, run:
+The implementation uses a queue, a discovered set, and a parent map. The
+parent map remembers which article first discovered each article, so once
+the target is found, the program can walk backward from target to source
+and then reverse the list.
 
-  java -cp target/classes wikipath.Main path --edges demo-data/edges.txt --names demo-data/names.txt "Kanye West" "Quantum mechanics"
+## Files
 
-For repeated queries, run:
+- `src/main/java/wikipath/Main.java`: menu and user input.
+- `src/main/java/wikipath/WikiGraph.java`: adjacency list and file loading.
+- `src/main/java/wikipath/BFSPathFinder.java`: BFS shortest path.
+- `src/main/java/wikipath/WikiAnalyzer.java`: random-pair analysis and bridge counts.
+- `demo-data/edges.txt`: small test graph.
+- `demo-data/names.txt`: names for the small test graph.
+- `scripts/download-data.sh`: downloads the full SNAP dataset.
 
-  java -cp target/classes wikipath.Main repl --edges demo-data/edges.txt --names demo-data/names.txt
+## Compile
 
-For the full SNAP dataset, first run:
+```bash
+mkdir -p target/classes
+javac --release 17 -d target/classes src/main/java/wikipath/*.java
+```
 
-  bash scripts/download-data.sh
+## Run With Demo Data
 
-Then use the default data paths:
+```bash
+java -cp target/classes wikipath.Main demo-data/edges.txt demo-data/names.txt
+```
 
-  java -Xmx2g -cp target/classes wikipath.Main path "Kanye West" "Quantum mechanics"
-  java -Xmx2g -cp target/classes wikipath.Main stats --preset quick
+Then choose from the menu:
 
-Dataset source
+```text
+WikiPath Menu
+1. Find shortest path between two articles
+2. Run random pair analysis
+3. Print top bridge articles
+4. Exit
+Choose an option:
+```
 
-The full data comes from the Stanford SNAP wiki-topcats dataset:
-https://snap.stanford.edu/data/wiki-topcats.html. The download script
-fetches wiki-topcats.txt.gz and wiki-topcats-page-names.txt.gz and
-places the uncompressed files in data/. The repository also includes
-demo-data/edges.txt and demo-data/names.txt so the program can be run
-quickly without downloading the 430 MB full edge file.
+## Run With Full SNAP Data
+
+Download the data once:
+
+```bash
+bash scripts/download-data.sh
+```
+
+Then run:
+
+```bash
+java -Xmx4g -cp target/classes wikipath.Main data/wiki-topcats.txt data/wiki-topcats-page-names.txt
+```
+
+The full graph is large. If Java runs out of memory, use a larger heap,
+for example `-Xmx6g`.
+
+## Sample Outputs
+
+Successful path:
+
+```text
+Source article: Kanye_West
+Target article: Quantum_mechanics
+Shortest path:
+Kanye_West -> Hip_hop_music -> Music -> Physics -> Quantum_mechanics
+Number of hops: 4
+Time to compute: 1 ms
+```
+
+Invalid article:
+
+```text
+Invalid source article: Not A Real Page
+```
+
+No path found:
+
+```text
+Source article: Isolated_target
+Target article: Kanye_West
+No hyperlink path was found.
+Time to compute: 2 ms
+```
+
+Average path length analysis:
+
+```text
+Random pair analysis complete.
+Trials: 100
+Reachable pairs: 96
+Average shortest path length: 4.83 hops
+Time to compute: 1250 ms
+```
+
+Top bridge articles:
+
+```text
+Top 10 bridge articles:
+1. United_States appeared in 18 shortest paths
+2. World_War_II appeared in 10 shortest paths
+3. Mathematics appeared in 7 shortest paths
+```
+
+## Final Writeup
+
+WikiPath connects directly to NETS 1500 because Wikipedia is an
+information network and a directed web graph. The project stores the graph
+as an adjacency list, which is appropriate for a huge sparse network. It
+uses BFS, an introductory graph algorithm, to find shortest paths in an
+unweighted graph. The queue controls the level-by-level search, the
+discovered set prevents cycles and repeated work, and the parent map
+reconstructs the actual path.
+
+The analysis part samples many random source and target articles. For each
+pair, it runs BFS, records the path length if the target is reachable, and
+counts intermediate articles as bridge nodes. If many random pairs have
+short paths, that supports the small-world idea: even a very large
+information network can have surprisingly small distances between nodes.

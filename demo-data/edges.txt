@@ -1,4 +1,4 @@
-# Demo Wikipedia-like graph: 16 articles, hand-picked edges
+# Demo Wikipedia-like graph: 18 articles, hand-picked edges
 0 1
 0 2
 1 0
@@ -31,3 +31,4 @@
 14 3
 15 0
 15 4
+16 17

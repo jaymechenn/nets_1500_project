@@ -1,50 +1,161 @@
 package wikipath;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+
 /**
- * Directed graph in CSR (compressed sparse row) form.
+ * Stores the Wikipedia hyperlink graph as an adjacency list.
  *
- * <p>Memory footprint for the SNAP wiki-topcats graph (1.79M nodes,
- * 28.5M edges): about 7&nbsp;MB for offsets and 114&nbsp;MB for the
- * edge array, plus the title index. This fits comfortably in a
- * 1&ndash;2&nbsp;GB heap.</p>
+ * Nodes are article IDs and directed edges are hyperlinks from one article to
+ * another. For example, an edge "10 25" means article 10 links to article 25.
  */
-public final class WikiGraph {
+public class WikiGraph {
 
-    private final int[] offsets;
-    private final int[] edges;
+    private final HashMap<Integer, ArrayList<Integer>> adjacencyList;
+    private final HashMap<String, Integer> titleToId;
+    private final HashMap<Integer, String> idToTitle;
+    private final HashSet<Integer> articleIds;
+    private int edgeCount;
 
-    WikiGraph(int[] offsets, int[] edges) {
-        this.offsets = offsets;
-        this.edges = edges;
+    public WikiGraph() {
+        adjacencyList = new HashMap<>();
+        titleToId = new HashMap<>();
+        idToTitle = new HashMap<>();
+        articleIds = new HashSet<>();
+        edgeCount = 0;
     }
 
-    /** Number of nodes (article IDs are in {@code [0, numNodes())}). */
-    public int numNodes() {
-        return offsets.length - 1;
+    /**
+     * Loads a whitespace-separated edge list from disk.
+     *
+     * Lines beginning with # are ignored. Each normal line should contain two
+     * integers: sourceID targetID.
+     */
+    public void loadEdges(String edgeFile) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(edgeFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+
+                String[] parts = line.split("\\s+");
+                if (parts.length < 2) {
+                    continue;
+                }
+
+                try {
+                    int from = Integer.parseInt(parts[0]);
+                    int to = Integer.parseInt(parts[1]);
+                    addEdge(from, to);
+                } catch (NumberFormatException e) {
+                    // Skip malformed rows instead of stopping the whole load.
+                }
+            }
+        }
     }
 
-    /** Number of directed edges (hyperlinks). */
-    public long numEdges() {
-        return edges.length;
+    /**
+     * Loads optional article title mappings from disk.
+     *
+     * Expected format: articleID title. Titles may contain underscores.
+     */
+    public void loadTitles(String titleFile) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(titleFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+
+                int firstSpace = line.indexOf(' ');
+                if (firstSpace < 0) {
+                    continue;
+                }
+
+                try {
+                    int id = Integer.parseInt(line.substring(0, firstSpace));
+                    String title = line.substring(firstSpace + 1).trim();
+                    if (!title.isEmpty()) {
+                        idToTitle.put(id, title);
+                        titleToId.put(normalizeTitle(title), id);
+                        articleIds.add(id);
+                    }
+                } catch (NumberFormatException e) {
+                    // Skip malformed title rows.
+                }
+            }
+        }
     }
 
-    /** Out-degree of node {@code u}. */
-    public int outDegree(int u) {
-        return offsets[u + 1] - offsets[u];
+    public void addEdge(int from, int to) {
+        adjacencyList.putIfAbsent(from, new ArrayList<>());
+        adjacencyList.putIfAbsent(to, new ArrayList<>());
+        adjacencyList.get(from).add(to);
+        articleIds.add(from);
+        articleIds.add(to);
+        edgeCount++;
     }
 
-    /** Inclusive start index of node {@code u}'s neighbors in the edge array. */
-    public int neighborStart(int u) {
-        return offsets[u];
+    public List<Integer> getNeighbors(int articleId) {
+        ArrayList<Integer> neighbors = adjacencyList.get(articleId);
+        if (neighbors == null) {
+            return new ArrayList<>();
+        }
+        return neighbors;
     }
 
-    /** Exclusive end index of node {@code u}'s neighbors in the edge array. */
-    public int neighborEnd(int u) {
-        return offsets[u + 1];
+    public boolean containsArticle(int articleId) {
+        return articleIds.contains(articleId);
     }
 
-    /** Direct access to the contiguous edge array (read-only contract). */
-    public int[] edgeArray() {
-        return edges;
+    public boolean containsArticle(String title) {
+        return getIdFromTitle(title) != -1;
+    }
+
+    public int getIdFromTitle(String title) {
+        if (title == null) {
+            return -1;
+        }
+        Integer id = titleToId.get(normalizeTitle(title));
+        if (id == null) {
+            return -1;
+        }
+        return id;
+    }
+
+    public String getTitleFromId(int id) {
+        String title = idToTitle.get(id);
+        if (title == null) {
+            return "Article_" + id;
+        }
+        return title;
+    }
+
+    public ArrayList<Integer> getAllArticleIds() {
+        return new ArrayList<>(articleIds);
+    }
+
+    public int getNodeCount() {
+        return articleIds.size();
+    }
+
+    public int getEdgeCount() {
+        return edgeCount;
+    }
+
+    public boolean hasTitles() {
+        return !titleToId.isEmpty();
+    }
+
+    private String normalizeTitle(String title) {
+        return title.trim().replace(' ', '_').toLowerCase();
     }
 }

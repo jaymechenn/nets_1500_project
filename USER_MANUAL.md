@@ -1,126 +1,157 @@
-# Six Degrees of Wikipedia User Manual
+# WikiPath User Manual
 
 ## Requirements
 
 - Java 17 or newer.
-- Maven is optional. The repository already includes compiled classes in `target/classes` on this machine, but a grader can rebuild from source with either Maven or `javac`.
-- For the full graph, use at least a 2 GB Java heap with `-Xmx2g`.
+- No external Java libraries are required.
+- The full SNAP graph is large, so use a larger heap such as `-Xmx4g`.
 
-## Building
-
-Without Maven:
+## Build
 
 ```bash
 mkdir -p target/classes
 javac --release 17 -d target/classes src/main/java/wikipath/*.java
 ```
 
-With Maven:
+## Data Files
 
-```bash
-mvn package
-```
+The project expects:
 
-## Dataset
+- An edge list file where each line is `sourceID targetID`.
+- An optional title file where each line is `articleID title`.
 
-The full dataset is Stanford SNAP's wiki-topcats graph:
+The full dataset comes from Stanford SNAP:
 https://snap.stanford.edu/data/wiki-topcats.html
 
-To download it into `data/`, run:
+Download it with:
 
 ```bash
 bash scripts/download-data.sh
 ```
 
-This downloads:
+For quick testing, use the included small files:
 
-- `data/wiki-topcats.txt`
-- `data/wiki-topcats-page-names.txt`
+- `demo-data/edges.txt`
+- `demo-data/names.txt`
 
-The repository also includes a small 16-article demo dataset in `demo-data/` for quick testing.
+The demo graph includes a normal connected portion and a small disconnected
+example for testing "no path found" output.
 
-If the final submission system allows large files, include the downloaded `data/` files with the submission because the assignment asks for the dataset as well as the source link. If the upload limit prevents that, the download script and SNAP link document the exact dataset source.
-
-## Running a Shortest-Path Query
+## Run
 
 Demo data:
 
 ```bash
-java -cp target/classes wikipath.Main path --edges demo-data/edges.txt --names demo-data/names.txt "Kanye West" "Quantum mechanics"
+java -cp target/classes wikipath.Main demo-data/edges.txt demo-data/names.txt
 ```
 
-Full dataset:
+Full data:
 
 ```bash
-java -Xmx2g -cp target/classes wikipath.Main path "Kanye West" "Quantum mechanics"
+java -Xmx4g -cp target/classes wikipath.Main data/wiki-topcats.txt data/wiki-topcats-page-names.txt
 ```
 
-Screenshot of expected demo output:
+If no command-line arguments are given, the program tries to load:
+
+- `data/wiki-topcats.txt`
+- `data/wiki-topcats-page-names.txt`
+
+## Menu Options
 
 ```text
-[load] reading page names from demo-data/names.txt
-[load]   16 titles loaded in 0.01s
-[load] pass 1: counting out-degrees in demo-data/edges.txt
-[load]   16 nodes, 32 edges in 0.01s
-[load] pass 2: filling adjacency arrays
-[load]   adjacency built in 0.00s
-[load] indexed 16 titles
-[load] done in 0.13s
-
-Shortest path: 4 hops, 15 nodes visited, 0.000s
-  Kanye_West
-  -> Hip_hop_music
-  -> Music
-  -> Physics
-  -> Quantum_mechanics
+WikiPath Menu
+1. Find shortest path between two articles
+2. Run random pair analysis
+3. Print top bridge articles
+4. Exit
+Choose an option:
 ```
 
-## Interactive Mode
+### Option 1: Shortest Path
 
-Interactive mode loads the graph once and then answers many queries:
+Enter either article titles or numeric IDs. Titles are case-insensitive,
+and spaces are treated like underscores.
 
-```bash
-java -cp target/classes wikipath.Main repl --edges demo-data/edges.txt --names demo-data/names.txt
-```
-
-Then type one query per line:
+Example input:
 
 ```text
-Kanye West | Quantum mechanics
-Philadelphia | Mongolia
-quit
+Source article title or ID: Kanye West
+Target article title or ID: Quantum mechanics
 ```
 
-## Statistics Commands
+Example output:
 
-Use these after downloading the full dataset:
-
-```bash
-java -Xmx2g -cp target/classes wikipath.Main stats --preset quick
-java -Xmx2g -cp target/classes wikipath.Main avgpath --preset default
-java -Xmx2g -cp target/classes wikipath.Main bridges --preset rigorous --top 25
+```text
+Source article: Kanye_West
+Target article: Quantum_mechanics
+Shortest path:
+Kanye_West -> Hip_hop_music -> Music -> Physics -> Quantum_mechanics
+Number of hops: 4
+Time to compute: 1 ms
 ```
 
-The available presets are:
+Invalid title output:
 
-- `quick`: 50 sources by 50 targets.
-- `default`: 200 sources by 200 targets.
-- `rigorous`: 500 sources by 500 targets.
-
-You can also override the sampling size directly:
-
-```bash
-java -Xmx2g -cp target/classes wikipath.Main stats --sources 100 --targets 100 --top 20 --seed 42
+```text
+Invalid source article: Not A Real Page
 ```
 
-## Browser Demo
+No path output:
 
-Open `web/index.html` in a browser. It runs the same shortest-path idea on the small `web/graph.json` graph and is intended only as a visual demonstration; the graded implementation is the Java CLI.
+```text
+Source article: Isolated_target
+Target article: Kanye_West
+No hyperlink path was found.
+Time to compute: 2 ms
+```
+
+### Option 2: Random Pair Analysis
+
+Enter how many random pairs to sample. The program runs BFS for each pair,
+computes the average shortest path length among reachable pairs, and counts
+bridge articles.
+
+Example:
+
+```text
+How many random pairs should be sampled? 100
+
+Random pair analysis complete.
+Trials: 100
+Reachable pairs: 96
+Average shortest path length: 4.83 hops
+Time to compute: 1250 ms
+
+Small-world interpretation:
+The sampled paths are short, which supports the idea that Wikipedia behaves like a small-world information network.
+```
+
+### Option 3: Top Bridge Articles
+
+This prints the articles that appeared most often as intermediate nodes in
+the shortest paths from the most recent analysis run.
+
+Example:
+
+```text
+Top 10 bridge articles:
+1. United_States appeared in 18 shortest paths
+2. World_War_II appeared in 10 shortest paths
+3. Mathematics appeared in 7 shortest paths
+```
+
+If analysis has not been run yet:
+
+```text
+No bridge data yet. Run random pair analysis first.
+```
 
 ## Troubleshooting
 
-If the program says an edges or names file is missing, run `bash scripts/download-data.sh` for the full dataset or pass the demo paths with `--edges demo-data/edges.txt --names demo-data/names.txt`.
+If the graph file cannot be loaded, check that the path is correct.
 
-If Java runs out of memory on the full dataset, make sure the command includes `-Xmx2g`.
+If the title file cannot be loaded, the program can still search by numeric
+article IDs.
 
-If `mvn` is not found, use the `javac` build command above or use the already compiled classes with `java -cp target/classes wikipath.Main ...`.
+If the full graph runs out of memory, rerun Java with a larger heap, such as
+`-Xmx6g`.
