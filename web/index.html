@@ -575,9 +575,7 @@
   </div>
 
   <script>
-    // -------------------------------------------------------------------
-    // Mode detection: live (Java backend) vs demo (static graph.json BFS).
-    // -------------------------------------------------------------------
+    
     const STATE = {
       mode: "demo",
       info: { nodes: 0, edges: 0, hasTitles: false },
@@ -648,9 +646,6 @@
       }
     }
 
-    // -------------------------------------------------------------------
-    // Demo BFS (used when there is no live backend).
-    // -------------------------------------------------------------------
     function demoBfs(srcId, tgtId) {
       const t0 = performance.now();
       const adj = STATE.demoAdj;
@@ -701,9 +696,6 @@
       return id === undefined ? -1 : id;
     }
 
-    // -------------------------------------------------------------------
-    // Path search (dispatches to live or demo).
-    // -------------------------------------------------------------------
     async function findPath(srcText, tgtText) {
       if (STATE.mode === "live") {
         const url = "/api/path?src=" + encodeURIComponent(srcText)
@@ -817,9 +809,6 @@
       }[c]));
     }
 
-    // -------------------------------------------------------------------
-    // Visualization.
-    // -------------------------------------------------------------------
     function clearViz() {
       $("viz").innerHTML = "";
     }
@@ -871,7 +860,7 @@
         }
       }
 
-      // Draw neighbor edges (thin) first.
+      // Draw neighbor edges first.
       for (const n of neighborPos) {
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         line.setAttribute("class", "edge");
@@ -881,7 +870,7 @@
         line.setAttribute("y2", n.y);
         svg.appendChild(line);
       }
-      // Draw path edges (thick) on top.
+ 
       for (let i = 0; i < pathPos.length - 1; i++) {
         const a = pathPos[i], b = pathPos[i + 1];
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
@@ -967,9 +956,7 @@
       target.innerHTML = '<div class="error">' + escapeHtml(msg) + "</div>";
     }
 
-    // -------------------------------------------------------------------
-    // Result rendering.
-    // -------------------------------------------------------------------
+
     function renderResult(result) {
       const r = $("result");
       r.classList.remove("empty-state");
@@ -1016,9 +1003,7 @@
       renderViz(result);
     }
 
-    // -------------------------------------------------------------------
-    // Analysis.
-    // -------------------------------------------------------------------
+
     async function runAnalysis(trials) {
       const container = $("analysisPanel");
       const body = $("analysis");
@@ -1145,9 +1130,7 @@
       $("analysis").innerHTML = grid + bridges;
     }
 
-    // -------------------------------------------------------------------
-    // History.
-    // -------------------------------------------------------------------
+
     function loadHistory() {
       try {
         const raw = localStorage.getItem(HISTORY_KEY);
@@ -1196,9 +1179,7 @@
       });
     }
 
-    // -------------------------------------------------------------------
-    // Wiring.
-    // -------------------------------------------------------------------
+
     async function handleFind() {
       const s = $("src").value.trim();
       const t = $("tgt").value.trim();
