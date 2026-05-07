@@ -1,18 +1,137 @@
 WikiPath
-Group members: Kieran, Andreaa, Jayme
+Group members: Kieran Chetty, Andreea Rusu, Jayme Chen
 
-WikiPath is a Java application for finding the shortest hyperlink path
-between two Wikipedia articles. It treats Wikipedia as a directed graph:
-articles are nodes, and hyperlinks are directed edges from one article to
-another. This is a programmatic version of the "Six Degrees of Wikipedia"
-or WikiRace problem.
+WikiPath is a Java application that finds the shortest hyperlink path
+between any two Wikipedia articles, a programmatic take on the "Six
+Degrees of Wikipedia" problem. The application loads a pre-built
+Wikipedia hyperlink graph from the Stanford SNAP dataset (wiki-topcats),
+constructs an adjacency list representation, and uses BFS to find the
+minimum-hop path between a source and target article. The adjacency list
+representation fits a large sparse graph better than an adjacency matrix.
+The implementation uses a queue, a discovered set, and a parent map. The
+parent map remembers which article first discovered each article, so once
+the target is found, the program can walk backward from target to source
+and then reverse the list. Beyond simple path finding, WikiPath also runs
+network analysis by sampling random article pairs to compute statistics
+such as average path length, local clustering coefficients, neighborhood
+overlap, and betweenness style bridge scores for the most connected hub
+articles. The project includes both a terminal menu interface and an
+optional local web server that serves a browser based UI for querying
+the graph interactively.
+
+Dataset:
+The wiki-topcats dataset from Stanford SNAP contains approximately 1.79
+million nodes (articles) and 28.5 million directed edges (hyperlinks).
+Loading and storing a graph this size requires several implementation decisions.
+The adjacency list is stored as a HashMap<Integer, ArrayList<Integer>>
+mapping integer article IDs to neighbor lists, which avoids the overhead
+of string keys across 28 million entries. Title mappings are kept in a
+separate pair of HashMaps (title → ID and ID → title) and loaded optionally.
+So, if the title file is missing, the application still functions using raw
+integer IDs. The sorted prefix index for autocomplete is built lazily on
+first use so it does not add to startup time.
 
 Project category: Implementation
 
-Categories used: Graphs and graph algorithms, and Information Networks /
-World Wide Web. Wikipedia is a directed information network, BFS applies
-because each hyperlink has equal weight, and the adjacency list
-representation fits a large sparse graph better than an adjacency matrix.
+Categories used: Graphs and graph algorithms, Social Networks, and
+Information Networks (World Wide Web).
+
+1. Graph and Graph Algorithms
+The Wikipedia hyperlink graph is modeled as a large directed graph where
+nodes are articles and directed edges are hyperlinks. BFS is the core
+algorithm used for shortest path finding, since every hyperlink counts
+as one unweighted hop and BFS guarantees the fewest hop path by exploring
+level by level. A parent map is maintained during traversal to reconstruct
+the full path. The analyzer also computes a sampled version of betweenness
+centrality by tracking which interior nodes appear most frequently across 
+many BFS runs, identifying hub "bridge" articles. Local clustering
+coefficients and neighborhood overlap are computed per the definitions from class.
+
+2. Social Networks
+The analyzer computes several metrics that we learned during the Social
+Networks unit. Local clustering coefficients measure the probability that
+two neighbors of a given article also link to each other. A high coefficient
+suggests a tightly knit topic cluster, often as a result of triadic closure.
+Neighborhood overlap is computed for each consecutive edge on a sampled
+shortest path. Edges with zero overlap are local bridges, connecting parts
+of the graph whose neighborhoods don't otherwise intersect. The bridge
+scoring (sampled betweenness centrality) identifies hub articles that act
+as important connectors across many shortest paths, analogous to nodes
+with high betweenness. The SNAP edge list encodes only hyperlinks with
+no tie-strength labels or article attribute metadata, so concepts like
+strong/weak ties and homophily do not directly apply. The dataset has
+no way to distinguish a strong link from a weak one, and articles carry
+no attributes to test for homophily.
+
+3. Information Networks (World Wide Web)
+Wikipedia is a real world instance of the World Wide Web that we studied
+in the Information Networks unit. Articles are resources identified by
+URLs, hyperlinks are HTTP-navigable connections between them, and the
+resulting network of pages has a giant strongly connected component,
+short average path lengths, and a small number of extremely high degree
+hub pages that dominate connectivity. WikiRace, the game of navigating
+from one Wikipedia article to another by clicking hyperlinks as fast
+as possible, is basically a human exploration of this structure. Our
+project automates that game with BFS, which always finds the optimal
+route. The fact that most random article pairs are reachable in just
+4–5 hops (even across a graph of 1.79 million articles) is a direct
+ demonstration of the small-world property of web graphs. The hub articles
+that appear repeatedly in our bridge rankings (pages like "United States"
+or "United Kingdom") reflect the uneven degree distribution characteristic
+of real web graphs, where a small number of pages attract a disproportionate 
+hare of incoming links.
+
+Random Pair Analysis
+The random pair analysis works by uniformly sampling source and target
+article IDs at random from the full set of articles in the graph, then
+running BFS on each pair. If BFS finds a path, the hop count is recorded,
+all interior nodes are credited one point toward their bridge score, and
+each consecutive edge on the path is evaluated for neighborhood overlap.
+If BFS finds no path (the target is unreachable from the source in the
+directed graph), the pair is counted as unreachable and excluded from
+the path-length average.
+The number of trials is configurable. In practice, 100–500 trials is
+enough to get a stable average path length and a reasonable bridge
+ranking, since the wiki-topcats graph is highly connected and most
+random pairs are reachable. Running 1,000+ trials produces more stable
+bridge scores at the cost of a few extra seconds of compute.
+
+Changes from proposal and TA feedback:
+
+The core idea from the proposal, a WikiRace-style shortest path finder
+over the SNAP Wikipedia graph, is unchanged. This is what we added,
+clarified, or expanded in response to TA feedback and through
+implementation:
+  - Scale and sampling made explicit: The final version documents the
+    dataset size (1.79M nodes, 28.5M edges) and explains the adjacency
+    list design choices that follow from it. The random pair analysis
+    uses uniform random sampling with a configurable trial count.
+    100–500 trials produces stable average path lengths and 1,000+
+    trials produces more reliable bridge rankings.
+  - Bridge scoring formalized: The proposal mentioned identifying
+    "common bridge articles" informally. The final implementation uses
+    a sampled betweenness centrality score: each interior node on a
+    found shortest path receives one point, and articles are ranked
+    by total score across all trials. This is a sampled approximation,
+    not true global betweenness.
+  - Additional network metrics added: Beyond path length and bridge scores,
+    the final version computes local clustering coefficients, neighborhood
+    overlap for each edge on sampled paths, and a count of local bridge
+    edges (those with zero neighborhood overlap).
+  - Social Networks added as a course category: The proposal listed Graphs
+    and Graph Algorithms and Information Networks. Through implementation
+    we realized the analysis maps closely onto Social Networks concepts
+    from class (clustering coefficients, neighborhood overlap, local
+    bridges, and the connection to strong/weak tiea) so we added that as
+    a third category.
+  - Web UI added. The proposal described a terminal application. The
+    final version also includes an optional local web server and browser
+    based UI for interactive querying, path visualization, and analysis results.
+  - Limitations noted. Because the SNAP edge list contains only hyperlinks
+    with no tie-strength labels or article attribute metadata, we cannot
+    directly measure homophily or classify ties as strong vs. weak. We
+    discuss these as theoretical connections to the course material
+    rather than implemented features.
 
 Work breakdown: Kieran handled the file loading and graph representation.
 Andreaa implemented BFS, discovered sets, parent maps, and path
@@ -20,54 +139,37 @@ reconstruction. Jayme worked on the menu interface, random-pair analysis,
 bridge article output, demo data, and documentation. Everyone contributed
 to testing and the final writeup.
 
-AI usage: We used Claude to brainstorm and refine the original project
-idea. Near final submission, we used Codex to simplify the implementation
-and documentation so the project matched introductory NETS 1500 graph
-algorithms. We reviewed the code and writeup before submission.
+Jayme built the graph engine (WikiGraph.java), including edge list
+and title file parsing, adjacency list construction, the prefix search
+autocomplete index, and the article lookup utilities.
+Andreea implemented BFS path finding (BFSPathFinder.java) and path
+reconstruction, and wrote the network analysis logic in WikiAnalyzer.java
+(bridge counting, neighborhood overlap, local clustering coefficient,
+and summary reporting).
+Kieran built the web server (WebServer.java) and the browser-based UI
+(the web/ directory), and integrated everything in Main.java including
+CLI argument parsing and the terminal menu.
 
-Changes from proposal and TA feedback: The final version keeps the
-proposed WikiRace-style shortest path finder and makes the graph scale and
-sampling plan explicit. It uses the SNAP Wikipedia graph, supports title
-lookup when the mapping file is present, includes random-pair analysis for
-average shortest path length, and prints the top 10 bridge articles from
-sampled paths. This bridge score is a simple sampled version of betweenness
-centrality: an article scores higher when it appears inside more shortest
-paths. We also added class concepts from network structure: local
-clustering coefficient, neighborhood overlap, and local bridge edges. We
-discuss strong/weak ties and homophily as limitations because the SNAP edge
-list has hyperlinks but no tie strengths or article attribute labels.
 
-Dataset
+AI usage: We used Claude in two ways during this project. For the
+browser-based UI, we used Claude to help generate and refine the HTML,
+CSS, and JavaScript, as web front-end development was not covered in
+this course. For brainstorming and scoping, we used Claude early on to
+help refine the project proposal.
 
-The project uses the Stanford SNAP wiki-topcats dataset:
-
-https://snap.stanford.edu/data/wiki-topcats.html
-
-The full dataset files are:
-
-- wiki-topcats.txt: edge list, one directed edge per line.
-- wiki-topcats-page-names.txt: article ID to title mapping.
-
-The graph is large enough to show real network behavior. It has about
-1.79 million article IDs and 28.5 million directed hyperlinks. The
-repository also includes a small demo-data/ folder for quick testing,
-including a disconnected example for the "no path found" case.
 
 Course Concepts
-
-This project uses introductory graph and information network concepts:
-
 - Directed graphs: a hyperlink from article A to article B is not the
   same as a hyperlink from B to A.
 - Nodes and edges: articles are nodes, hyperlinks are edges.
 - Adjacency lists: the graph is stored as
   HashMap<Integer, ArrayList<Integer>>.
-- BFS: shortest paths are found with breadth-first search.
+- BFS: shortest paths are found with breadth first search.
 - Queues: BFS uses Queue<Integer> to explore by levels.
 - Discovered sets: HashSet<Integer> prevents repeated work and cycles.
 - Parent maps: HashMap<Integer, Integer> reconstructs the final path.
 - Information networks: Wikipedia is a web graph.
-- Small-world structure: random-pair analysis checks whether article
+- Small-world structure: random pair analysis checks whether article
   pairs are often connected by only a few links.
 - Betweenness centrality: the analyzer uses a sampled version by counting
   how often articles appear inside shortest paths.
@@ -75,156 +177,16 @@ This project uses introductory graph and information network concepts:
   article's neighbors also link to one another.
 - Neighborhood overlap: the analyzer measures how much two linked
   articles' outgoing neighborhoods overlap.
-- Local bridges: a shortest-path edge with zero neighborhood overlap is
+- Local bridges: a shortest path edge with zero neighborhood overlap is
   counted as a local bridge edge.
-
-How BFS Finds The Shortest Path
-
-Every hyperlink counts as one hop, so this is an unweighted graph. BFS is
-the right algorithm because it explores all articles one hop away, then all
-articles two hops away, then all articles three hops away, and so on. The
-first time BFS reaches the target article, it has found the minimum number
-of hyperlinks needed to get there.
-
-The implementation uses a queue, a discovered set, and a parent map. The
-parent map remembers which article first discovered each article, so once
-the target is found, the program can walk backward from target to source
-and then reverse the list.
 
 Files
 
 - src/main/java/wikipath/Main.java: menu and user input.
 - src/main/java/wikipath/WikiGraph.java: adjacency list and file loading.
 - src/main/java/wikipath/BFSPathFinder.java: BFS shortest path.
-- src/main/java/wikipath/WikiAnalyzer.java: random-pair analysis, sampled
+- src/main/java/wikipath/WikiAnalyzer.java: random pair analysis, sampled
   betweenness, and bridge counts.
 - demo-data/edges.txt: small test graph.
 - demo-data/names.txt: names for the small test graph.
 - scripts/download-data.sh: downloads the full SNAP dataset.
-
-Compile
-
-```bash
-mkdir -p target/classes
-javac --release 17 -d target/classes src/main/java/wikipath/*.java
-```
-
-Run With Demo Data
-
-```bash
-java -cp target/classes wikipath.Main demo-data/edges.txt demo-data/names.txt
-```
-
-Then choose from the menu:
-
-```text
-WikiPath Menu
-1. Find shortest path between two articles
-2. Run random pair analysis (also prints top bridge articles)
-3. Exit
-Choose an option:
-```
-
-Run With Full SNAP Data
-
-Download the data once:
-
-```bash
-bash scripts/download-data.sh
-```
-
-Then run:
-
-```bash
-java -Xmx4g -cp target/classes wikipath.Main data/wiki-topcats.txt data/wiki-topcats-page-names.txt
-```
-
-The full graph is large. If Java runs out of memory, use a larger heap,
-for example -Xmx6g.
-
-Sample Outputs
-
-Successful path:
-
-```text
-Source article: Kanye_West
-Target article: Quantum_mechanics
-Shortest path:
-Kanye_West -> Hip_hop_music -> Music -> Physics -> Quantum_mechanics
-Number of hops: 4
-Time to compute: 1 ms
-```
-
-Invalid article:
-
-```text
-Invalid source article: Not A Real Page
-```
-
-No path found:
-
-```text
-Source article: Isolated_target
-Target article: Kanye_West
-No hyperlink path was found.
-Time to compute: 2 ms
-```
-
-Average path length analysis:
-
-```text
-Random pair analysis complete.
-Trials: 100
-Reachable pairs: 96
-Average shortest path length: 2.81 hops
-Time to compute: 21 ms
-```
-
-Top bridge articles / sampled betweenness:
-
-```text
-Top 10 bridge articles / sampled betweenness scores:
-1. United_States appeared inside 18 sampled shortest paths
-2. World_War_II appeared inside 10 sampled shortest paths
-3. Mathematics appeared inside 7 sampled shortest paths
-```
-
-Extra network measures:
-
-```text
-Extra network measures:
-Average local clustering coefficient: 0.100
-Average neighborhood overlap on path edges: 0.007
-Local bridge edges on sampled shortest paths: 44 out of 45
-```
-
-Final Writeup
-
-WikiPath connects directly to NETS 1500 because Wikipedia is an
-information network and a directed web graph. The project stores the graph
-as an adjacency list, which is appropriate for a huge sparse network. It
-uses BFS, an introductory graph algorithm, to find shortest paths in an
-unweighted graph. The queue controls the level-by-level search, the
-discovered set prevents cycles and repeated work, and the parent map
-reconstructs the actual path.
-
-The analysis part samples many random source and target articles. For each
-pair, it runs BFS, records the path length if the target is reachable, and
-counts intermediate articles as bridge nodes. This is a sampled version of
-betweenness centrality: exact betweenness would require considering every
-source-target pair, but sampling random pairs gives an understandable
-intro-level estimate of which articles lie between many others.
-
-It also computes simple network measures from class. Local clustering
-coefficient asks whether an article's outgoing neighbors also link to one
-another. Neighborhood overlap asks how similar the outgoing neighborhoods
-are for two linked articles. An edge with zero neighborhood overlap is
-treated as a local bridge because it connects two parts of the graph whose
-neighborhoods do not otherwise overlap.
-
-If many random pairs have short paths, that supports the small-world idea:
-even a very large information network can have surprisingly small distances
-between nodes. Homophily and strong/weak ties are useful class ideas, but
-this dataset only gives hyperlink edges. It does not label article topics
-or give tie strengths, so the project discusses those ideas as limitations
-rather than pretending to measure them directly.
