@@ -133,12 +133,13 @@ implementation:
     discuss these as theoretical connections to the course material
     rather than implemented features.
 
-Work breakdown: Kieran handled the file loading and graph representation.
-Andreaa implemented BFS, discovered sets, parent maps, and path
-reconstruction. Jayme worked on the menu interface, random-pair analysis,
-bridge article output, demo data, and documentation. Everyone contributed
-to testing and the final writeup.
+Work breakdown:
 
+Kieran handled the file loading and graph representation, and built the browser interface - a small 
+Java HTTP server (WebServer.java) that shows the in-memory graph 
+as JSON, plus a rewritten web/index.html with title autocomplete, 
+an SVG path visualization, a random-pair analysis dashboard, search history, 
+and Wikipedia deep links. He also simplified the CLI menu and revised the user manual.
 Jayme built the graph engine (WikiGraph.java), including edge list
 and title file parsing, adjacency list construction, the prefix search
 autocomplete index, and the article lookup utilities.
@@ -146,16 +147,12 @@ Andreea implemented BFS path finding (BFSPathFinder.java) and path
 reconstruction, and wrote the network analysis logic in WikiAnalyzer.java
 (bridge counting, neighborhood overlap, local clustering coefficient,
 and summary reporting).
-Kieran built the web server (WebServer.java) and the browser-based UI
-(the web/ directory), and integrated everything in Main.java including
-CLI argument parsing and the terminal menu.
 
 
-AI usage: We used Claude in two ways during this project. For the
-browser-based UI, we used Claude to help generate and refine the HTML,
-CSS, and JavaScript, as web front-end development was not covered in
-this course. For brainstorming and scoping, we used Claude early on to
-help refine the project proposal.
+
+AI usage: We used Claude in two ways during this project. For some of the
+browser-based UI CSS/HTML and novel(not taught) JScript features. For brainstorming and 
+scoping, we used Claude early on to help refine the project proposal.
 
 
 Course Concepts
