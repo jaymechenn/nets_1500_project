@@ -21,21 +21,10 @@ import java.util.Random;
 import java.util.concurrent.Executors;
 
 /**
- * Minimal HTTP server that exposes the loaded WikiGraph and BFSPathFinder over
- * a JSON API and serves the static files in the {@code web/} directory.
+ * Basically this exposes the loaded WikiGraph and BFSPathFinder over
+ * a JSON API and serves the static files.
  *
- * The browser talks to these endpoints; the graph itself stays in JVM memory.
- * That means BFS runs against the full 1.79M-node graph without the browser
- * ever touching it.
- *
- * Endpoints:
- * <ul>
- *   <li>GET /api/info                    -&gt; graph stats</li>
- *   <li>GET /api/path?src=&amp;tgt=&amp;neighbors= -&gt; shortest path + optional neighborhoods</li>
- *   <li>GET /api/suggest?q=&amp;limit=     -&gt; type-ahead suggestions</li>
- *   <li>GET /api/random                  -&gt; two random article ids/titles</li>
- *   <li>GET /api/analysis?trials=        -&gt; random-pair analysis + top bridges</li>
- * </ul>
+
  */
 public class WebServer {
 
@@ -74,7 +63,6 @@ public class WebServer {
                 + (graph.hasTitles() ? " (titles loaded)" : " (no titles, use IDs)"));
     }
 
-    // -------- handlers ------------------------------------------------------
 
     private final class InfoHandler implements HttpHandler {
         @Override
@@ -142,9 +130,7 @@ public class WebServer {
         }
 
         private void appendNeighborhoods(StringBuilder json, List<Integer> path) {
-            // Per path node, sample up to DEFAULT_NEIGHBOR_LIMIT outgoing
-            // neighbors that are NOT already on the path. Cap the total node
-            // count so the browser does not get crushed on hub articles.
+
             HashSet<Integer> pathSet = new HashSet<>(path);
             int budget = MAX_PATH_NEIGHBORHOOD_NODES;
             json.append(",\"neighborhoods\":[");
@@ -278,7 +264,7 @@ public class WebServer {
         }
     }
 
-    // -------- helpers -------------------------------------------------------
+    // helpers I used
 
     private int resolveArticle(String input) {
         String trimmed = input == null ? "" : input.trim();
