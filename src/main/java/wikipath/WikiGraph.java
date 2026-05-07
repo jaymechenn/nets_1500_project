@@ -12,8 +12,6 @@ import java.util.Map;
 /**
  * Stores the Wikipedia hyperlink graph as an adjacency list.
  *
- * Nodes are article IDs and directed edges are hyperlinks from one article to
- * another. For example, an edge "10 25" means article 10 links to article 25.
  */
 public class WikiGraph {
 
@@ -61,7 +59,7 @@ public class WikiGraph {
                     int to = Integer.parseInt(parts[1]);
                     addEdge(from, to);
                 } catch (NumberFormatException e) {
-                    // Skip malformed rows instead of stopping the whole load.
+
                 }
             }
         }
@@ -69,8 +67,6 @@ public class WikiGraph {
 
     /**
      * Loads optional article title mappings from disk.
-     *
-     * Expected format: articleID title. Titles may contain underscores.
      */
     public void loadTitles(String titleFile) throws IOException {
         try (BufferedReader reader = new BufferedReader(new FileReader(titleFile))) {
@@ -95,7 +91,7 @@ public class WikiGraph {
                         articleIds.add(id);
                     }
                 } catch (NumberFormatException e) {
-                    // Skip malformed title rows.
+
                 }
             }
         }
@@ -165,8 +161,6 @@ public class WikiGraph {
      * Returns up to {@code limit} article IDs whose normalized titles begin
      * with the given prefix. Useful for type-ahead suggestions in the web UI.
      *
-     * The first call builds a sorted index of all titles, which is O(n log n)
-     * but only happens once. Each subsequent call is O(log n + limit).
      */
     public List<Integer> searchTitlePrefix(String prefix, int limit) {
         if (prefix == null || titleToId.isEmpty() || limit <= 0) {
