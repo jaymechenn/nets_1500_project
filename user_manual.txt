@@ -1,96 +1,107 @@
-WikiPath User Manual
-Java 17 or newer
-No external libraries required
-Full SNAP graph is large, so use a larger heap such as -Xmx4g
+WikiPath - User Manual
 
-— BUILD —
-mkdir -p target/classes
-javac --release 17 -d target/classes src/main/java/wikipath/*.java
-
-— DATASET —
-The project expects:
-
-An edge list file where each line is sourceID targetID
-An optional title file where each line is articleID title
-
-The full dataset comes from Stanford SNAP: https://snap.stanford.edu/data/wiki-topcats.html
-Download it with: bash scripts/download-data.sh
-
-For quick testing, use the included small files:
-demo-data/edges.txt
-demo-data/names.txt
-
-The demo graph includes a normal connected portion and a small disconnected example for testing "no path found" output.
-
-— RUN —
-
-Demo Data:
-java -cp target/classes wikipath.Main demo-data/edges.txt demo-data/names.txt
-
-Full Data:
-java -Xmx4g -cp target/classes wikipath.Main data/wiki-topcats.txt data/wiki-topcats-page-names.txt
-
-If no command-line arguments are given, the program tries to load:
-data/wiki-topcats.txt
-data/wiki-topcats-page-names.txt
-
-— MENU OPTIONS —
-WikiPath Menu
-1. Find shortest path between two articles
-2. Run random pair analysis (also prints top bridge articles)
-3. Exit
-Choose an option:
-Option 1: Shortest Path
-Enter either article titles or numeric IDs. Titles are case insensitive, and spaces are treated like underscores.
-
-Example input —
-Source article title or ID: Kanye West
-Target article title or ID: Quantum mechanics
-
-Example output —
-Source article: Kanye_West
-Target article: Quantum_mechanics
-Shortest path:
-Kanye_West -> Hip_hop_music -> Music -> Physics -> Quantum_mechanics
-Number of hops: 4
-Time to compute: 1 ms
-
-Invalid title output —
-Invalid source article: Not A Real Page
-
-No path output —
-Source article: Isolated_target
-Target article: Kanye_West
-No hyperlink path was found.
-Time to compute: 2 ms
+Our project finds the shortest hyperlink path between two Wikipedia articles
+using breadth-first search. Articles are nodes, hyperlinks are directed
+edges. You can run it as a text menu in a terminal, or as a browser UI.
 
 
-Option 2: Random Pair Analysis
-Enter how many random pairs to sample. The program runs BFS for each pair, computes the average shortest path length among reachable pairs, counts bridge articles using sampled betweenness centrality, estimates local clustering, and measures neighborhood overlap on edges from sampled shortest paths. The top 10 bridge articles are printed automatically at the end of the analysis.
-
-Example —
-How many random pairs should be sampled? 100
-
-Random pair analysis complete.
-Trials: 100
-Reachable pairs: 96
-Average shortest path length: 2.81 hops
-Time to compute: 21 ms
-
-Small-world interpretation:
-The sampled paths are short, which supports the idea that Wikipedia behaves like a small-world information network.
-
-Extra network measures:
-Average local clustering coefficient: 0.100
-Average neighborhood overlap on path edges: 0.007
-Local bridge edges on sampled shortest paths: 44 out of 45
+Requirements
+- Java 17 or newer.
+- A modern browser (for the web UI).
+- Use -Xmx4g if running the full Wikipedia graph.
 
 
-Option 3: Exit
-Quits the program.
+Build
+    mkdir -p target/classes
+    javac --release 17 -d target/classes src/main/java/wikipath/*.java
 
 
-— TROUBLESHOOTING —
-If the graph file cannot be loaded, check that the path is correct.
-If the title file cannot be loaded, the program can still search by numeric article IDs.
-If the full graph runs out of memory, rerun Java with a larger heap, such as -Xmx6g
+Run with the demo graph (18 articles)
+    java -cp target/classes wikipath.Main demo-data/edges.txt demo-data/names.txt
+
+
+Run with the full Stanford SNAP graph (~1.79M articles)
+    bash scripts/download-data.sh
+    java -Xmx4g -cp target/classes wikipath.Main \
+         data/wiki-topcats.txt data/wiki-topcats-page-names.txt
+
+
+Text menu
+After the graph loads you see:
+
+    WikiPath Menu
+    1. Find shortest path between two articles
+    2. Run random pair analysis (also prints top bridge articles)
+    3. Exit
+
+Option 1 asks for a source and target. You can type a title
+(case-insensitive, spaces and underscores are equivalent) or a numeric
+article ID. It prints the path, the number of hops, and the time taken.
+
+Option 2 asks how many random article pairs to sample. It runs BFS for
+each pair and prints the average path length, clustering and overlap
+measures, and the top 10 bridge articles seen across the sample.
+
+Option 3 exits.
+
+
+Browser UI
+Add --serve to start a local server, then open http://localhost:8080:
+
+    java -cp target/classes wikipath.Main --serve \
+         demo-data/edges.txt demo-data/names.txt
+
+For the full graph:
+
+    java -Xmx4g -cp target/classes wikipath.Main --serve \
+         data/wiki-topcats.txt data/wiki-topcats-page-names.txt
+
+
+The page has a sidebar (controls) and a main pane (results). The header
+shows a green "live backend" tag when the Java server is running, and an
+amber "demo (static)" tag if the page falls back to the small graph.json
+file.
+
+
+Find a path
+1. Type into "Source article". A dropdown suggests matching titles after
+   you have typed at least one letter. Pick one with the mouse, or with
+   Up/Down + Enter.
+2. Do the same for "Target article".
+3. Click "Find path" or press Enter.
+
+The result shows up two ways:
+- A diagram of the path (large blue circles for the path nodes, small
+  grey circles for a few of each path node's neighbors).
+- A row of clickable pills with the article titles. Each pill opens the
+  real Wikipedia article in a new tab.
+
+Stats: hops, time in milliseconds, articles in the path.
+
+
+Other buttons
+- Random pair: picks two random articles and runs BFS automatically.
+- Swap: swaps source and target.
+- Quick examples: prefilled pairs you can click to try.
+
+
+Random-pair analysis
+In the sidebar, set a sample size (1-5000) and click "Run analysis". An
+Analysis panel appears with seven stat cards (trials, reachable, average
+path length, clustering, overlap, local bridges, time) and a ranked list
+of the top bridge articles with bar charts. Each bridge article is also
+a Wikipedia link.
+
+
+
+Demo titles you can search
+    Kanye_West       Hip_hop_music    Pop_music         Music_industry
+    Music            Concert          Rap               Album
+    Sound            Physics          Acoustics         Producer
+    Recording_studio Wave             Quantum_mechanics Mathematics
+    Isolated_source  Isolated_target
+
+Quick demos:
+    Kanye_West      -> Quantum_mechanics    (4 hops)
+    Isolated_target -> Kanye_West           (no path)
+    Not_A_Real_Page -> anything             (invalid title)
